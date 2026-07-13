@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
-use glib::MainContext;
+use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
 use installer_core::{
