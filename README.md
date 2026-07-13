@@ -8,6 +8,25 @@ No new package format. No containers. Just a better first impression.
 
 ---
 
+## Install OpenInstall
+
+```bash
+curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh
+```
+
+Or via the URI itself once installed:
+
+```
+openinstall://openinstall?m=https://raw.githubusercontent.com/bejiihiu/openinstall/main/openinstall.json
+```
+
+You can also build from source:
+
+```bash
+cargo build --release -p installer-cli
+cp target/release/installer ~/.local/bin/
+```
+
 ## Supported distros
 
 | Distro | Package manager | Slot key |

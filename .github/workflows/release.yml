@@ -1,0 +1,38 @@
+name: Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+      - name: Install cross-compile deps (aarch64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+      - name: Build installer-cli
+        run: cargo build --release -p installer-cli --target ${{ matrix.target }}
+      - name: Build installer-bootstrapper
+        run: cargo build --release -p installer-bootstrapper --target ${{ matrix.target }}
+      - name: Prepare assets
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/installer dist/installer-${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/installer-bootstrapper dist/installer-bootstrapper-${{ matrix.target }}
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

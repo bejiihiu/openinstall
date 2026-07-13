@@ -1,0 +1,15 @@
+{
+    "name": "OpenInstall",
+    "publisher": "OpenInstall",
+    "version": "0.1.0",
+    "description": "Cross-distro Linux app installer",
+    "homepage": "https://github.com/bejiihiu/openinstall",
+    "license": "MIT",
+    "packages": {
+        "arch": "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-x86_64-unknown-linux-gnu",
+        "ubuntu": "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-x86_64-unknown-linux-gnu",
+        "fedora": "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-x86_64-unknown-linux-gnu",
+        "opensuse": "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-x86_64-unknown-linux-gnu",
+        "fallback": "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-x86_64-unknown-linux-gnu"
+    }
+}
