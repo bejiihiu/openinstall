@@ -99,10 +99,9 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         .build();
 
     let nav = adw::NavigationView::new();
-    let toolbar = adw::ToolbarView::builder()
-        .content(&nav)
-        .add_top_bar(&header)
-        .build();
+    let toolbar = adw::ToolbarView::new();
+    toolbar.set_content(Some(&nav));
+    toolbar.add_top_bar(&header);
     window.set_content(Some(&toolbar));
 
     let (tx, rx) = mpsc::channel::<ProgressUpdate>();
@@ -515,7 +514,7 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
             .message(t(data_cache.borrow().locale, "manifest.cache_info"))
             .detail(&result)
             .build();
-        dialog.show(gtk::Window::new());
+        dialog.show(None::<&gtk::Window>);
     });
 
     let data_history = Rc::clone(data);
@@ -535,7 +534,7 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
             .message(t(data_history.borrow().locale, "manifest.history"))
             .detail(&result)
             .build();
-        dialog.show(gtk::Window::new());
+        dialog.show(None::<&gtk::Window>);
     });
 }
 

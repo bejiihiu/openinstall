@@ -133,7 +133,7 @@ mod tests {
         for key in keys {
             let value = t(Locale::En, key);
             assert!(!value.is_empty(), "missing EN translation for {key}");
-            assert_ne!(value, *key, "EN translation for {key} is the key itself");
+            assert_ne!(value, key, "EN translation for {key} is the key itself");
         }
     }
 
