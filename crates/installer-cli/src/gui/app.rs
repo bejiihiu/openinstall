@@ -207,7 +207,7 @@ fn setup_drag_drop(
     let drop_target = gtk::DropTarget::new(glib::Type::STRING, DragAction::COPY);
     drop_target.connect_drop(move |_dt, value, _x, _y| {
         let s = match value.get::<Option<String>>() {
-            Some(Some(s)) => s,
+            Ok(Some(s)) => s,
             _ => return false,
         };
         let uri = match s.split_whitespace().next() {
