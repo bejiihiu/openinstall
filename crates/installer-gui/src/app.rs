@@ -28,6 +28,7 @@ struct UiData {
     manifest_path: Option<PathBuf>,
     environment: Environment,
     installer: Installer,
+    window: Option<gtk::Window>,
     page: Page,
     verification: Option<VerificationOutcome>,
     install_state: Option<InstallationState>,
@@ -71,6 +72,7 @@ pub fn run() {
             manifest_path,
             environment,
             installer,
+            window: None,
             page: Page::Manifest,
             verification: None,
             install_state,
@@ -110,6 +112,8 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     page_content.set_hexpand(true);
     page_content.set_vexpand(true);
 
+    data.borrow_mut().window = Some(window.upcast_ref::<gtk::Window>().clone());
+
     let nav_page = adw::NavigationPage::builder()
         .title(t(data.borrow().locale, "app.title"))
         .child(&page_content)
@@ -117,7 +121,6 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     nav.push(&nav_page);
 
     let refresh: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
-    let _refresh_weak = Rc::clone(&refresh);
 
     let data_c = Rc::clone(&data);
     let tx_c = tx.clone();
@@ -138,8 +141,8 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
 
     let data_clone = Rc::clone(&data);
     let refresh_clone = Rc::clone(&refresh);
-    glib::idle_add_local(move || {
-        if let Ok(msg) = rx.try_recv() {
+    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+        while let Ok(msg) = rx.try_recv() {
             let mut d = data_clone.borrow_mut();
             match msg {
                 ProgressUpdate::Progress(p) => {
@@ -182,6 +185,8 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         }
         glib::ControlFlow::Continue
     });
+
+    glib::ControlFlow::Continue
 
     if let Some(ref f) = *refresh.borrow() {
         f();
@@ -617,7 +622,8 @@ fn render_done(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
         .build();
     let name = app_name.clone().unwrap_or_default();
     launch_btn.connect_clicked(move |_| {
-        let _ = SysCommand::new(&name).spawn();
+        let safe_name = name.replace('/', "_");
+        let _ = SysCommand::new(&safe_name).spawn();
     });
     btn_box.append(&launch_btn);
 
@@ -639,7 +645,12 @@ fn render_done(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
     let close_btn = gtk::Button::builder()
         .label(t(locale, "done.close"))
         .build();
-    close_btn.connect_clicked(|_| std::process::exit(0));
+    let data_close = Rc::clone(data);
+    close_btn.connect_clicked(move |_| {
+        if let Some(ref window) = data_close.borrow().window {
+            window.close();
+        }
+    });
     btn_box.append(&close_btn);
 
     vbox.append(&btn_box);
@@ -676,7 +687,12 @@ fn render_error(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, message: String) 
         .label(t(locale, "error.close"))
         .css_classes(["suggested-action"])
         .build();
-    close_btn.connect_clicked(|_| std::process::exit(0));
+    let data_close = Rc::clone(data);
+    close_btn.connect_clicked(move |_| {
+        if let Some(ref window) = data_close.borrow().window {
+            window.close();
+        }
+    });
     vbox.append(&close_btn);
 
     parent.append(&vbox);

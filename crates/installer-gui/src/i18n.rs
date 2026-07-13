@@ -95,8 +95,34 @@ fn en(key: &str) -> &str {
 mod tests {
     use super::*;
 
+    struct EnvGuard {
+        vars: Vec<(&'static str, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn new(vars: &[&'static str]) -> Self {
+            let saved = vars
+                .iter()
+                .map(|k| (*k, std::env::var_os(k).map(|v| v.to_string_lossy().to_string())))
+                .collect();
+            EnvGuard { vars: saved }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, val) in &self.vars {
+                match val {
+                    Some(v) => std::env::set_var(key, v),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
+
     #[test]
     fn locale_detect_defaults_to_en() {
+        let _guard = EnvGuard::new(&["LANG", "LC_ALL", "LC_MESSAGES"]);
         std::env::remove_var("LANG");
         std::env::remove_var("LC_ALL");
         std::env::remove_var("LC_MESSAGES");
@@ -105,9 +131,9 @@ mod tests {
 
     #[test]
     fn locale_detect_russian() {
+        let _guard = EnvGuard::new(&["LANG", "LC_ALL", "LC_MESSAGES"]);
         std::env::set_var("LANG", "ru_RU.UTF-8");
         assert_eq!(Locale::detect(), Locale::Ru);
-        std::env::remove_var("LANG");
     }
 
     #[test]
@@ -160,11 +186,10 @@ mod tests {
 
     #[test]
     fn locale_detect_lc_all_overrides_lang() {
+        let _guard = EnvGuard::new(&["LANG", "LC_ALL", "LC_MESSAGES"]);
         std::env::set_var("LANG", "en_US.UTF-8");
         std::env::set_var("LC_ALL", "ru_RU.UTF-8");
         assert_eq!(Locale::detect(), Locale::Ru);
-        std::env::remove_var("LANG");
-        std::env::remove_var("LC_ALL");
     }
 }
 

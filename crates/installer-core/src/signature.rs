@@ -40,6 +40,17 @@ impl SignatureSpec {
             return Err(SignatureError::InvalidFormat);
         }
 
+        if public_key_hex.len() != 64 {
+            return Err(SignatureError::InvalidHex {
+                field: "public_key",
+            });
+        }
+        if signature_hex.len() != 128 {
+            return Err(SignatureError::InvalidHex {
+                field: "signature",
+            });
+        }
+
         Ok(Self {
             public_key_hex: public_key_hex.to_string(),
             signature_hex: signature_hex.to_string(),
@@ -57,6 +68,7 @@ impl SignatureSpec {
             path: path.to_path_buf(),
             source,
         })?;
+        #[allow(deprecated)]
         let verifier = UnparsedPublicKey::new(&signature::ED25519, &public_key);
         verifier
             .verify(&bytes, &signature)

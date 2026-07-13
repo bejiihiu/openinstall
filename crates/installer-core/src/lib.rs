@@ -443,8 +443,8 @@ fn command_exists(binary: &str) -> bool {
     false
 }
 
-#[allow(unused_mut)]
 fn command_candidates(binary: &str) -> Vec<String> {
+    #[allow(unused_mut)]
     let mut candidates = vec![binary.to_string()];
 
     #[cfg(windows)]

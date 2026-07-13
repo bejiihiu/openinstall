@@ -1,8 +1,14 @@
 use crate::InstallUri;
 
+fn escape_desktop_value(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "\\r").replace(';', "\\;")
+}
+
 pub fn desktop_entry(app_name: &str, exec_path: &str, icon_name: Option<&str>) -> String {
+    let app_name = escape_desktop_value(app_name);
+    let exec_path = escape_desktop_value(exec_path);
     let icon_line = icon_name
-        .map(|icon| format!("Icon={icon}\n"))
+        .map(|icon| format!("Icon={}\n", escape_desktop_value(icon)))
         .unwrap_or_default();
     format!(
         "[Desktop Entry]\nType=Application\nName={app_name}\nExec={exec_path} %u\n{icon_line}NoDisplay=true\nCategories=Utility;\nMimeType=x-scheme-handler/linuxinstall;x-scheme-handler/openinstall;\n"
@@ -10,14 +16,16 @@ pub fn desktop_entry(app_name: &str, exec_path: &str, icon_name: Option<&str>) -
 }
 
 pub fn desktop_entry_for_install_uri(app_name: &str, exec_path: &str, uri: &InstallUri) -> String {
+    let app_name = escape_desktop_value(app_name);
+    let exec_path = escape_desktop_value(exec_path);
     let icon = if uri.app_id.is_empty() {
         None
     } else {
         Some(uri.app_id.as_str())
     };
-    let mime_line = format!("MimeType=x-scheme-handler/{};\n", uri.scheme);
+    let mime_line = format!("MimeType=x-scheme-handler/{};\n", escape_desktop_value(&uri.scheme));
     let icon_line = icon
-        .map(|icon| format!("Icon={icon}\n"))
+        .map(|icon| format!("Icon={}\n", escape_desktop_value(icon)))
         .unwrap_or_default();
     format!(
         "[Desktop Entry]\nType=Application\nName={app_name}\nExec={exec_path} %u\n{icon_line}NoDisplay=true\nCategories=Utility;\n{mime_line}"

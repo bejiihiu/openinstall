@@ -174,16 +174,42 @@ mod tests {
         assert_eq!(name, "no-slash");
     }
 
+    struct EnvGuard {
+        vars: Vec<(&'static str, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn new(vars: &[&'static str]) -> Self {
+            let saved = vars
+                .iter()
+                .map(|k| (*k, std::env::var_os(k).map(|v| v.to_string_lossy().to_string())))
+                .collect();
+            EnvGuard { vars: saved }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, val) in &self.vars {
+                match val {
+                    Some(v) => std::env::set_var(key, v),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
+
     #[test]
     fn default_cache_dir_uses_xdg() {
+        let _guard = EnvGuard::new(&["XDG_CACHE_HOME"]);
         std::env::set_var("XDG_CACHE_HOME", "/tmp/xdg-cache");
         let dir = default_cache_dir();
         assert_eq!(dir, PathBuf::from("/tmp/xdg-cache").join("openinstall"));
-        std::env::remove_var("XDG_CACHE_HOME");
     }
 
     #[test]
     fn default_cache_dir_fallback() {
+        let _guard = EnvGuard::new(&["XDG_CACHE_HOME"]);
         std::env::remove_var("XDG_CACHE_HOME");
         let dir = default_cache_dir();
         assert!(dir.ends_with("openinstall"));
@@ -191,18 +217,13 @@ mod tests {
 
     #[test]
     fn which_finds_on_path() {
+        let _guard = EnvGuard::new(&["PATH"]);
         let current = std::env::current_exe().unwrap();
         let parent = current.parent().unwrap();
-        let old_path = std::env::var_os("PATH");
         std::env::set_var("PATH", parent);
         let exe_name = current.file_name().unwrap().to_string_lossy().to_string();
         let result = which(&exe_name);
         assert!(result.is_ok());
-        if let Some(old) = old_path {
-            std::env::set_var("PATH", old);
-        } else {
-            std::env::remove_var("PATH");
-        }
     }
 
     #[test]

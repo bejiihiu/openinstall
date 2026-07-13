@@ -63,10 +63,21 @@ pub fn serve_latest_app(
 fn handle_connection(mut stream: TcpStream, body: &[u8]) -> Result<(), ApiError> {
     let mut request = [0u8; 1024];
     let bytes_read = stream.read(&mut request)?;
+    if bytes_read == 0 {
+        return Ok(());
+    }
     let request_line = String::from_utf8_lossy(&request[..bytes_read]);
-    let is_latest = request_line.starts_with("GET /app/latest ")
-        || request_line.starts_with("GET /app/latest?")
-        || request_line.starts_with("GET /app/latest HTTP/");
+    let (method, path, _version) = match parse_request_line(&request_line) {
+        Some(parsed) => parsed,
+        None => {
+            let bad_request = b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            stream.write_all(bad_request)?;
+            stream.flush()?;
+            return Ok(());
+        }
+    };
+
+    let is_latest = method == "GET" && (path == "/app/latest" || path.starts_with("/app/latest?"));
 
     let not_found = b"{\"error\":\"not found\"}";
     let body_bytes: &[u8] = if is_latest { body } else { not_found };
@@ -84,6 +95,13 @@ fn handle_connection(mut stream: TcpStream, body: &[u8]) -> Result<(), ApiError>
     stream.write_all(body_bytes)?;
     stream.flush()?;
     Ok(())
+}
+
+fn parse_request_line(line: &str) -> Option<(&str, &str, &str)> {
+    let line = line.trim();
+    let (method, rest) = line.split_once(' ')?;
+    let (path, version) = rest.split_once(' ')?;
+    Some((method, path, version))
 }
 
 #[cfg(test)]

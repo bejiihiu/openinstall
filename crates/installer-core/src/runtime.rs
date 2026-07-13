@@ -490,10 +490,22 @@ impl Installer {
 
     pub fn clear_cache(&self) -> Result<(), InstallerError> {
         if self.cache_dir.exists() {
-            fs::remove_dir_all(&self.cache_dir).map_err(|source| InstallerError::CacheIo {
-                path: self.cache_dir.clone(),
-                source,
-            })?;
+            self.cache_dir
+                .read_dir()
+                .map_err(|source| InstallerError::CacheIo {
+                    path: self.cache_dir.clone(),
+                    source,
+                })?
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_ok_and(|t| !t.is_symlink()))
+                .for_each(|e| {
+                    let path = e.path();
+                    if path.is_dir() {
+                        let _ = fs::remove_dir_all(&path);
+                    } else {
+                        let _ = fs::remove_file(&path);
+                    }
+                });
         }
 
         fs::create_dir_all(&self.cache_dir).map_err(|source| InstallerError::CacheIo {
@@ -788,7 +800,23 @@ impl Installer {
             path: self.cache_dir.clone(),
             source,
         })?;
-        fs::write(&self.history_path, json).map_err(|source| InstallerError::Io {
+        let tmp_path = self.history_path.with_extension("json.tmp");
+        {
+            let mut tmp = fs::File::create(&tmp_path).map_err(|source| InstallerError::Io {
+                path: tmp_path.clone(),
+                source,
+            })?;
+            tmp.write_all(&json)
+                .map_err(|source| InstallerError::Io {
+                    path: tmp_path.clone(),
+                    source,
+                })?;
+            tmp.sync_all().map_err(|source| InstallerError::Io {
+                path: tmp_path.clone(),
+                source,
+            })?;
+        }
+        fs::rename(&tmp_path, &self.history_path).map_err(|source| InstallerError::Io {
             path: self.history_path.clone(),
             source,
         })
