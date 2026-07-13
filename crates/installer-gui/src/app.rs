@@ -14,6 +14,8 @@ use installer_core::{
 
 use installer_gui::i18n::{t, Locale};
 
+type RefreshFn = Rc<RefCell<Option<Box<dyn Fn()>>>>;
+
 enum ProgressUpdate {
     Progress(InstallProgress),
     VerifyResult(Result<VerificationOutcome, String>),
@@ -120,7 +122,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         .build();
     nav.push(&nav_page);
 
-    let refresh: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
+    let refresh: RefreshFn = Rc::new(RefCell::new(None));
 
     let data_c = Rc::clone(&data);
     let tx_c = tx.clone();
@@ -246,11 +248,11 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
 
     let pub_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let pub_label = gtk::Label::builder()
-        .label(&format!("{}: {}", t(locale, "detail.publisher"), manifest.publisher))
+        .label(format!("{}: {}", t(locale, "detail.publisher"), manifest.publisher))
         .xalign(0.0)
         .build();
     let ver_label = gtk::Label::builder()
-        .label(&format!("{}: {}", t(locale, "detail.version"), manifest.version))
+        .label(format!("{}: {}", t(locale, "detail.version"), manifest.version))
         .xalign(0.0)
         .build();
     pub_row.append(&pub_label);
@@ -381,7 +383,7 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
     content.append(&button_box);
 
     let has_pkg = selection.is_some();
-    let bad_sig = verification.as_ref().map_or(false, |v| v.signature_ok == Some(false));
+    let bad_sig = verification.as_ref().is_some_and(|v| v.signature_ok == Some(false));
     install_btn.set_sensitive(has_pkg && !bad_sig);
     remove_btn.set_sensitive(has_pkg);
     verify_btn.set_sensitive(has_pkg);
