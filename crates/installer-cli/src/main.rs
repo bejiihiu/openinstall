@@ -288,6 +288,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
         Some("signature") => signature_command(args),
         #[cfg(all(feature = "gui", target_os = "linux"))]
         Some("gui") => gui_command(args),
+        Some("self-update") => self_update_command(),
         Some(command) => Err(format!("unknown command: {command}\n")),
     }
 }
@@ -362,8 +363,32 @@ fn load_manifest(path: Option<String>, command: &str) -> Result<Manifest, String
 
 fn print_help() {
     println!(
-        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  gui [manifest]                          launch graphical installer (Linux only)
-  gui --register-desktop                  add OpenInstall to application menu\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
+        "installer-cli\n\n\
+         Commands:\n  \
+         detect\n  \
+         validate <manifest.json>\n  \
+         select <manifest.json>\n  \
+         show <manifest.json>\n  \
+         verify <manifest.json>\n  \
+         install <manifest.json>\n  \
+         remove <manifest.json>\n  \
+         update <manifest.json>\n  \
+         reinstall <manifest.json>\n  \
+         rollback <manifest.json>\n  \
+         history <manifest.json>\n  \
+         cache clear\n  cache info\n  \
+         uri <scheme://app>\n  \
+         uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  \
+         uri desktop-entry <app_name> <exec_path>\n  \
+         uri register <app_name> <exec_path> [scheme]\n  \
+         publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  \
+         serve <manifest.json> [addr]\n  \
+         gui [manifest]                          launch graphical installer (Linux only)\n  \
+         gui --register-desktop                  add OpenInstall to application menu\n  \
+         self-update                             download and replace itself\n  \
+         signature verify <signature> <file>\n  \
+         help\n\n  \
+         <scheme://app[?m=manifest_url]>    also accepted as top-level command"
     );
 }
 
@@ -471,6 +496,53 @@ fn register_gui_desktop() -> Result<(), String> {
     }
     println!("OpenInstall registered in application menu");
     println!("URI schemes registered: openinstall://, openinstaller://, linuxinstall://");
+    Ok(())
+}
+
+fn self_update_command() -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("failed to get exe path: {e}"))?;
+
+    let arch = std::env::consts::ARCH;
+    let target = match arch {
+        "x86_64" => "x86_64-unknown-linux-gnu",
+        "aarch64" => "aarch64-unknown-linux-gnu",
+        other => return Err(format!("unsupported architecture: {other}")),
+    };
+    let url = format!(
+        "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-{target}"
+    );
+
+    println!("Downloading OpenInstall {target}...");
+    let client = reqwest::blocking::Client::builder()
+        .build()
+        .map_err(|e| format!("http client: {e}"))?;
+    let response = client
+        .get(&url)
+        .send()
+        .and_then(|r| r.error_for_status())
+        .map_err(|e| format!("download failed: {e}"))?;
+    let bytes = response
+        .bytes()
+        .map_err(|e| format!("read response: {e}"))?;
+
+    if bytes.len() < 4096 {
+        return Err("downloaded file is too small — not a valid binary".to_string());
+    }
+
+    let temp = std::env::temp_dir().join("openinstall-update");
+    std::fs::write(&temp, &bytes).map_err(|e| format!("write temp: {e}"))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755))
+            .map_err(|e| format!("chmod temp: {e}"))?;
+    }
+
+    std::fs::rename(&temp, &exe).map_err(|e| format!("replace binary failed: {e}"))?;
+
+    println!("OpenInstall updated to the latest version ({})", url);
+    println!("Restart to use the new version");
     Ok(())
 }
 

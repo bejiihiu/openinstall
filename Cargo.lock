@@ -859,6 +859,7 @@ dependencies = [
  "gtk4",
  "installer-core",
  "libadwaita",
+ "reqwest",
  "serde_json",
 ]
 

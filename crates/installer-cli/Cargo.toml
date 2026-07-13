@@ -15,6 +15,7 @@ gui = ["gtk4", "adw", "glib"]
 [dependencies]
 installer-core = { path = "../installer-core" }
 serde_json = "1"
+reqwest = { version = "0.13.4", default-features = false, features = ["blocking", "rustls"] }
 gtk4 = { version = "0.11.4", features = ["v4_10"], optional = true }
 adw = { package = "libadwaita", version = "0.9.2", features = ["v1_5"], optional = true }
 glib = { version = "0.22.4", optional = true }

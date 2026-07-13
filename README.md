@@ -30,6 +30,9 @@ You can also build from source:
 cargo build --release -p installer-cli --features gui
 cp target/release/installer ~/.local/bin/
 installer gui --register-desktop   # add to application menu (Linux)
+
+# update itself later:
+installer self-update
 ```
 
 ## Supported distros
@@ -128,6 +131,7 @@ installer publish --name ... (see above)            generate a manifest
 installer serve <manifest> [addr]                   serve /app/latest on HTTP
 installer gui [manifest]                            launch graphical installer (Linux only)
 installer gui --register-desktop                    add to application menu
+installer self-update                                download and replace itself
 
 # URI subcommands
 installer uri <scheme://app>                        parse URI and print details
