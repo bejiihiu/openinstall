@@ -592,7 +592,7 @@ fn render_done(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
     let locale = data.borrow().locale;
     let app_name = data.borrow().manifest.as_ref().map(|m| m.name.clone());
     let staged = data.borrow().staged_path.clone();
-    drop(data);
+    let _ = data;
 
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 16);
     vbox.set_valign(gtk::Align::Center);

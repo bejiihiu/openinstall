@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::mpsc;
@@ -601,7 +601,7 @@ impl Installer {
 
         if let Some(stdout) = stdout {
             let reader = BufReader::new(stdout);
-            for text in reader.lines().flatten() {
+            for text in reader.lines().map_while(Result::ok) {
                 let _ = tx.send(InstallProgress {
                     downloaded_bytes: 0,
                     total_bytes: 0,
@@ -614,7 +614,7 @@ impl Installer {
 
         if let Some(stderr) = stderr {
             let reader = BufReader::new(stderr);
-            for text in reader.lines().flatten() {
+            for text in reader.lines().map_while(Result::ok) {
                 let _ = tx.send(InstallProgress {
                     downloaded_bytes: 0,
                     total_bytes: 0,
