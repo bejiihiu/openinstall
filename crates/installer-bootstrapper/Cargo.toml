@@ -1,0 +1,9 @@
+[package]
+name = "installer-bootstrapper"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+installer-core = { path = "../installer-core" }
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "rustls"] }

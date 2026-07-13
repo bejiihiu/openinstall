@@ -1,0 +1,35 @@
+name: Publish OpenInstall Manifest
+on:
+  release:
+    types: [published]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install installer-cli
+        run: |
+          curl -sSfL https://github.com/openinstall/installer/releases/latest/download/installer-cli-x86_64-linux.tar.gz \
+            | tar xz -C /usr/local/bin installer
+      - name: Download release assets
+        run: |
+          gh release download "${{ github.event.release.tag_name }}" -D ./assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate manifest
+        run: |
+          installer publish \
+            --name "${{ github.event.release.name }}" \
+            --publisher "${{ github.repository_owner }}" \
+            --version "${{ github.event.release.tag_name }}" \
+            --description "Release ${{ github.event.release.tag_name }}" \
+            --ubuntu ./assets/*.deb \
+            --fedora ./assets/*.rpm \
+            --arch ./assets/*.pkg.tar.zst \
+            --fallback ./assets/*.AppImage \
+            --output ./openinstall.json
+      - name: Upload manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: openinstall-manifest
+          path: ./openinstall.json

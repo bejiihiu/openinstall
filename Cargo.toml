@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/installer-core",
+    "crates/installer-cli",
+    "crates/installer-gui",
+    "crates/installer-bootstrapper",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+version = "0.1.0"
+
