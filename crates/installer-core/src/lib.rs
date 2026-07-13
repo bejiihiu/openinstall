@@ -242,12 +242,10 @@ impl Manifest {
                 url: url.to_string(),
                 source,
             })?;
-        let text = response
-            .text()
-            .map_err(|source| ManifestError::Http {
-                url: url.to_string(),
-                source,
-            })?;
+        let text = response.text().map_err(|source| ManifestError::Http {
+            url: url.to_string(),
+            source,
+        })?;
         Self::from_json_str(&text)
     }
 

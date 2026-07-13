@@ -1,5 +1,5 @@
-use url::Url;
 use thiserror::Error;
+use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstallUri {
@@ -27,11 +27,7 @@ impl InstallUri {
         let scheme = scheme.to_ascii_lowercase();
         match scheme.as_str() {
             "linuxinstall" | "openinstall" => {
-                let app_id = remainder
-                    .split(|c: char| c == '/' || c == '?')
-                    .next()
-                    .unwrap_or("")
-                    .trim();
+                let app_id = remainder.split(['/', '?']).next().unwrap_or("").trim();
                 if app_id.is_empty() {
                     return Err(InstallUriError::MissingAppId);
                 }
@@ -148,10 +144,9 @@ mod tests {
 
     #[test]
     fn parses_uri_with_multiple_query_params() {
-        let uri = InstallUri::parse(
-            "openinstall://cursor?m=https://example.com/manifest.json&foo=bar",
-        )
-        .expect("uri should parse");
+        let uri =
+            InstallUri::parse("openinstall://cursor?m=https://example.com/manifest.json&foo=bar")
+                .expect("uri should parse");
         assert_eq!(uri.app_id, "cursor");
         assert_eq!(
             uri.manifest_url.as_ref().map(|u| u.as_str()),
@@ -161,9 +156,10 @@ mod tests {
 
     #[test]
     fn ignores_path_after_app_id() {
-        let uri =
-            InstallUri::parse("openinstall://cursor/extra/path?m=https://example.com/manifest.json")
-                .expect("uri should parse");
+        let uri = InstallUri::parse(
+            "openinstall://cursor/extra/path?m=https://example.com/manifest.json",
+        )
+        .expect("uri should parse");
         assert_eq!(uri.app_id, "cursor");
         assert!(uri.manifest_url.is_some());
     }
@@ -182,10 +178,9 @@ mod tests {
 
     #[test]
     fn handles_percent_encoded_manifest_url() {
-        let uri = InstallUri::parse(
-            "openinstall://cursor?m=https%3A%2F%2Fexample.com%2Fmanifest.json",
-        )
-        .expect("uri should parse");
+        let uri =
+            InstallUri::parse("openinstall://cursor?m=https%3A%2F%2Fexample.com%2Fmanifest.json")
+                .expect("uri should parse");
         assert_eq!(uri.app_id, "cursor");
         assert_eq!(
             uri.manifest_url.as_ref().map(|u| u.as_str()),
@@ -195,8 +190,8 @@ mod tests {
 
     #[test]
     fn ignores_invalid_manifest_url_value() {
-        let uri = InstallUri::parse("openinstall://cursor?m=not-a-valid-url")
-            .expect("uri should parse");
+        let uri =
+            InstallUri::parse("openinstall://cursor?m=not-a-valid-url").expect("uri should parse");
         assert_eq!(uri.app_id, "cursor");
         assert!(uri.manifest_url.is_none());
     }
@@ -210,9 +205,8 @@ mod tests {
 
     #[test]
     fn linuxinstall_scheme_with_manifest() {
-        let uri =
-            InstallUri::parse("linuxinstall://cursor?m=https://example.com/manifest.json")
-                .expect("uri should parse");
+        let uri = InstallUri::parse("linuxinstall://cursor?m=https://example.com/manifest.json")
+            .expect("uri should parse");
         assert_eq!(uri.scheme, "linuxinstall");
         assert_eq!(uri.app_id, "cursor");
         assert!(uri.manifest_url.is_some());
@@ -220,9 +214,8 @@ mod tests {
 
     #[test]
     fn has_manifest_returns_true_when_present() {
-        let uri =
-            InstallUri::parse("openinstall://cursor?m=https://example.com/manifest.json")
-                .expect("uri should parse");
+        let uri = InstallUri::parse("openinstall://cursor?m=https://example.com/manifest.json")
+            .expect("uri should parse");
         assert!(uri.has_manifest());
     }
 }

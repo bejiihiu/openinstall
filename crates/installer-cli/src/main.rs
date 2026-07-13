@@ -209,76 +209,77 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
             }
             match sub.as_deref() {
                 Some("desktop-entry") => {
-                let app_name = next_required(
-                    &mut args,
-                    "uri desktop-entry requires <app_name> <exec_path>",
-                )?;
-                let exec_path = next_required(
-                    &mut args,
-                    "uri desktop-entry requires <app_name> <exec_path>",
-                )?;
-                let scheme = args.next().unwrap_or_else(|| "openinstall".to_string());
-                let app_id = args.next().unwrap_or_else(|| "cursor".to_string());
-                let uri = InstallUri::parse(&format!("{scheme}://{app_id}"))
-                    .map_err(|error| error.to_string())?;
-                print!(
-                    "{}",
-                    desktop_entry_for_install_uri(&app_name, &exec_path, &uri)
-                );
-                Ok(())
-            }
-            Some("register") => {
-                let app_name = next_required(
-                    &mut args,
-                    "uri register requires <app_name> <exec_path> [scheme]",
-                )?;
-                let exec_path = next_required(
-                    &mut args,
-                    "uri register requires <app_name> <exec_path> [scheme]",
-                )?;
-                let scheme = args.next().unwrap_or_else(|| "openinstall".to_string());
-                let uri = InstallUri::parse(&format!("{scheme}://{app_name}"))
-                    .map_err(|error| error.to_string())?;
-                let desktop_content = desktop_entry_for_install_uri(&app_name, &exec_path, &uri);
-                let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
-                let apps_dir = PathBuf::from(&home).join(".local/share/applications");
-                fs::create_dir_all(&apps_dir)
-                    .map_err(|e| format!("failed to create {:?}: {e}", apps_dir))?;
-                let desktop_path = apps_dir.join(format!("{app_name}.desktop"));
-                fs::write(&desktop_path, &desktop_content)
-                    .map_err(|e| format!("failed to write {:?}: {e}", desktop_path))?;
-                println!("wrote: {}", desktop_path.display());
-
-                if Command::new("xdg-mime").arg("--version").output().is_ok() {
-                    let desktop_file = format!("{app_name}.desktop");
-                    let mime_type = format!("x-scheme-handler/{scheme}");
-                    if let Err(e) = Command::new("xdg-mime")
-                        .args(["default", &desktop_file, &mime_type])
-                        .status()
-                    {
-                        eprintln!("warning: xdg-mime failed: {e}");
-                    }
+                    let app_name = next_required(
+                        &mut args,
+                        "uri desktop-entry requires <app_name> <exec_path>",
+                    )?;
+                    let exec_path = next_required(
+                        &mut args,
+                        "uri desktop-entry requires <app_name> <exec_path>",
+                    )?;
+                    let scheme = args.next().unwrap_or_else(|| "openinstall".to_string());
+                    let app_id = args.next().unwrap_or_else(|| "cursor".to_string());
+                    let uri = InstallUri::parse(&format!("{scheme}://{app_id}"))
+                        .map_err(|error| error.to_string())?;
+                    print!(
+                        "{}",
+                        desktop_entry_for_install_uri(&app_name, &exec_path, &uri)
+                    );
+                    Ok(())
                 }
+                Some("register") => {
+                    let app_name = next_required(
+                        &mut args,
+                        "uri register requires <app_name> <exec_path> [scheme]",
+                    )?;
+                    let exec_path = next_required(
+                        &mut args,
+                        "uri register requires <app_name> <exec_path> [scheme]",
+                    )?;
+                    let scheme = args.next().unwrap_or_else(|| "openinstall".to_string());
+                    let uri = InstallUri::parse(&format!("{scheme}://{app_name}"))
+                        .map_err(|error| error.to_string())?;
+                    let desktop_content =
+                        desktop_entry_for_install_uri(&app_name, &exec_path, &uri);
+                    let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
+                    let apps_dir = PathBuf::from(&home).join(".local/share/applications");
+                    fs::create_dir_all(&apps_dir)
+                        .map_err(|e| format!("failed to create {:?}: {e}", apps_dir))?;
+                    let desktop_path = apps_dir.join(format!("{app_name}.desktop"));
+                    fs::write(&desktop_path, &desktop_content)
+                        .map_err(|e| format!("failed to write {:?}: {e}", desktop_path))?;
+                    println!("wrote: {}", desktop_path.display());
 
-                if Command::new("update-desktop-database")
-                    .arg("--version")
-                    .output()
-                    .is_ok()
-                {
-                    if let Err(e) = Command::new("update-desktop-database")
-                        .arg(&apps_dir)
-                        .status()
-                    {
-                        eprintln!("warning: update-desktop-database failed: {e}");
+                    if Command::new("xdg-mime").arg("--version").output().is_ok() {
+                        let desktop_file = format!("{app_name}.desktop");
+                        let mime_type = format!("x-scheme-handler/{scheme}");
+                        if let Err(e) = Command::new("xdg-mime")
+                            .args(["default", &desktop_file, &mime_type])
+                            .status()
+                        {
+                            eprintln!("warning: xdg-mime failed: {e}");
+                        }
                     }
-                }
 
-                Ok(())
+                    if Command::new("update-desktop-database")
+                        .arg("--version")
+                        .output()
+                        .is_ok()
+                    {
+                        if let Err(e) = Command::new("update-desktop-database")
+                            .arg(&apps_dir)
+                            .status()
+                        {
+                            eprintln!("warning: update-desktop-database failed: {e}");
+                        }
+                    }
+
+                    Ok(())
+                }
+                Some(uri) => handle_install_uri(uri),
+                None => Err("uri requires a linuxinstall:// or openinstall:// value".to_string()),
             }
-            Some(uri) => handle_install_uri(uri),
-            None => Err("uri requires a linuxinstall:// or openinstall:// value".to_string()),
         }
-        },
         Some("publish") => publish_command(args),
         Some("serve") => serve_command(args),
         Some("signature") => signature_command(args),
