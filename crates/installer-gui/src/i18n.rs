@@ -28,7 +28,7 @@ macro_rules! tr {
     };
 }
 
-pub fn t<'a>(locale: Locale, key: &'a str) -> &'a str {
+pub fn t(locale: Locale, key: &str) -> &str {
     match locale {
         Locale::En => en(key),
         Locale::Ru => ru(key).unwrap_or_else(|| en(key)),
@@ -193,7 +193,7 @@ mod tests {
     }
 }
 
-fn ru<'a>(key: &'a str) -> Option<&'a str> {
+fn ru(key: &str) -> Option<&str> {
     match key {
         "app.title" => Some("OpenInstall"),
         "app.subtitle" => Some("Установщик приложений Linux"),
