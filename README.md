@@ -43,7 +43,7 @@ cp target/release/installer ~/.local/bin/
 - **Linux** (tested on x86_64, aarch64)
 - **A package manager** from the table above (or PackageKit)
 - **curl/wget** (for the bootstrapper)
-- **GTK4 + libadwaita** (only for `installer-gui`)
+- **GTK4 + libadwaita** (only for `installer gui`)
 
 ## Quick start
 
@@ -121,6 +121,7 @@ installer cache clear                               nuke the cache
 installer cache info                                show cache size
 installer publish --name ... (see above)            generate a manifest
 installer serve <manifest> [addr]                   serve /app/latest on HTTP
+installer gui [manifest]                            launch graphical installer (Linux only)
 
 # URI subcommands
 installer uri <scheme://app>                        parse URI and print details
@@ -137,9 +138,10 @@ installer signature verify <sig> <file>             check ed25519 signature
 
 ### URI scheme
 
-Two supported schemes:
+Three supported schemes:
 
 - `openinstall://app_id`
+- `openinstaller://app_id`
 - `linuxinstall://app_id`
 
 Query parameters:
@@ -161,7 +163,7 @@ If `?m=` or `?manifest=` is present, the installer downloads the manifest and ru
 
 ```bash
 # if you have gtk4 and libadwaita installed
-installer-gui ./cursor.json
+installer gui ./manifest.json
 ```
 
 Shows the manifest details in a clean Adwaita window. Verify, install, remove, rollback — all clickable. The language follows your system locale (English and Russian right now; more translations welcome).
@@ -184,8 +186,7 @@ Three crates, one dependency chain:
 
 ```
 installer-core     →  types, adapters, verification, installer runtime
-installer-cli      →  command-line interface (20+ commands)
-installer-gui      →  GTK4 / LibAdwaita window
+installer-cli      →  CLI (20+ commands) + optional GUI (`--features gui`)
 installer-bootstrapper →  tiny entry point for download + launch
 ```
 
@@ -233,7 +234,7 @@ See [docs/manifest.md](docs/manifest.md) for details.
 cargo build --release
 # or just specific crates
 cargo build -p installer-core
-cargo build -p installer-cli
+cargo build -p installer-cli --features gui   # include GUI (Linux only)
 ```
 
 Tests:

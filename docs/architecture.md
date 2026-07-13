@@ -33,11 +33,11 @@ installer-core/src/
 
 ### installer-cli
 
-Command-line interface, ~300 lines. One match on the first argument, a bunch of thin wrappers around installer-core functions.
+Command-line interface with 20+ commands. One match on the first argument, a bunch of thin wrappers around installer-core functions. Optionally includes the GTK GUI behind `--features gui` (Linux only).
 
-### installer-gui
+### installer-gui / `installer gui`
 
-GTK4 + LibAdwaita window. Four pages:
+GTK4 + LibAdwaita window (merged into installer-cli, accessible via `installer gui`). Four pages:
 
 - **Manifest page** — shows app name, publisher, version, license, package matrix, changelog, signature status. Buttons for install/remove/verify/rollback/reload/cache-info/history.
 - **Installing page** — spinner + progress bar + log output.

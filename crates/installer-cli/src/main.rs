@@ -283,6 +283,8 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
         Some("publish") => publish_command(args),
         Some("serve") => serve_command(args),
         Some("signature") => signature_command(args),
+        #[cfg(all(feature = "gui", target_os = "linux"))]
+        Some("gui") => gui_command(args),
         Some(command) => Err(format!("unknown command: {command}\n")),
     }
 }
@@ -357,7 +359,7 @@ fn load_manifest(path: Option<String>, command: &str) -> Result<Manifest, String
 
 fn print_help() {
     println!(
-        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
+        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  gui [manifest]                          launch graphical installer (Linux only)\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
     );
 }
 
@@ -407,6 +409,12 @@ fn serve_command(mut args: impl Iterator<Item = String>) -> Result<(), String> {
     loop {
         std::thread::park();
     }
+}
+
+#[cfg(all(feature = "gui", target_os = "linux"))]
+fn gui_command(_args: impl Iterator<Item = String>) -> Result<(), String> {
+    crate::gui::app::run();
+    Ok(())
 }
 
 fn signature_command(mut args: impl Iterator<Item = String>) -> Result<(), String> {

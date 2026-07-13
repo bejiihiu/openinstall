@@ -26,7 +26,7 @@ impl InstallUri {
         let (scheme, remainder) = input.split_once("://").ok_or(InstallUriError::Invalid)?;
         let scheme = scheme.to_ascii_lowercase();
         match scheme.as_str() {
-            "linuxinstall" | "openinstall" => {
+            "linuxinstall" | "openinstall" | "openinstaller" => {
                 let app_id = remainder.split(['/', '?']).next().unwrap_or("").trim();
                 if app_id.is_empty() {
                     return Err(InstallUriError::MissingAppId);

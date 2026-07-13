@@ -16,13 +16,11 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev
-      - name: Install libadwaita
-        run: sudo apt-get install -y libadwaita-1-dev
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev
       - name: cargo test
         run: cargo test -p installer-core -p installer-cli -p installer-bootstrapper
       - name: cargo check (GUI)
-        run: cargo check -p installer-gui
+        run: cargo check -p installer-cli --features gui
       - name: cargo clippy
         run: cargo clippy --workspace -- -D warnings
       - name: cargo fmt

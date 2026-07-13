@@ -57,12 +57,15 @@ fn run(manifest_url: &str, headless: bool) -> Result<(), String> {
             return Err(format!("install failed: {stderr}"));
         }
     } else {
-        let installer_bin = find_installer_gui().ok_or_else(|| {
+        let (installer_bin, needs_gui_subcommand) = find_installer_gui().ok_or_else(|| {
             "installer-gui not found, use --headless or place installer-gui in PATH".to_string()
         })?;
-        let status = Command::new(&installer_bin)
-            .arg(dest.to_str().unwrap_or(""))
-            .status()
+        let mut cmd = Command::new(&installer_bin);
+        if needs_gui_subcommand {
+            cmd.arg("gui");
+        }
+        cmd.arg(dest.to_str().unwrap_or(""));
+        let status = cmd.status()
             .map_err(|e| format!("launch installer-gui failed: {e}"))?;
         if !status.success() {
             return Err("installer-gui exited with error".to_string());
@@ -86,11 +89,11 @@ fn fetch_manifest(url: &str) -> Result<Manifest, String> {
     Manifest::from_json_str(&text).map_err(|e| format!("invalid manifest: {e}"))
 }
 
-fn find_installer_gui() -> Option<PathBuf> {
+fn find_installer_gui() -> Option<(PathBuf, bool)> {
     let candidates = ["installer-gui", "installer"];
     for name in &candidates {
         if let Ok(path) = which(name) {
-            return Some(path);
+            return Some((path, *name == "installer"));
         }
     }
     None
