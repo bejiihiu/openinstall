@@ -245,8 +245,7 @@ fn setup_drag_drop(
         }
         true
     });
-    let controller: gtk::EventController = drop_target.upcast();
-    window.add_controller(&controller);
+    window.add_controller(&drop_target);
 }
 
 fn uri_decode(s: &str) -> String {
