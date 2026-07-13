@@ -184,8 +184,31 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
             println!("staged path: {}", outcome.staged_path.display());
             Ok(())
         }
-        Some("uri") => match args.next().as_deref() {
-            Some("desktop-entry") => {
+        Some("uri") => {
+            let sub = args.next();
+            if matches!(sub.as_deref(), Some("help") | Some("--help") | Some("-h")) {
+                println!(
+                    "uri commands:\n\
+                     \n\
+                     uri <scheme://app>                          Parse URI, print scheme + app id\n\
+                     uri <scheme://app?m=manifest_url>           Parse and install from manifest URL\n\
+                     uri desktop-entry <name> <path> [scheme]    Generate .desktop file\n\
+                     uri register <name> <path> [scheme]         Register URI handler\n\
+                     \n\
+                     Supported schemes: openinstall, linuxinstall\n\
+                     Query params: m=<manifest_url>, manifest=<manifest_url>\n\
+                     \n\
+                     Examples:\n\
+                       installer uri openinstall://cursor\n\
+                       installer uri openinstall://cursor?m=https://example.com/manifest.json\n\
+                       installer uri desktop-entry Cursor /usr/bin/cursor\n\
+                       installer uri register Cursor /usr/bin/cursor openinstall\n\
+                       installer openinstall://cursor?m=https://example.com/manifest.json"
+                );
+                return Ok(());
+            }
+            match sub.as_deref() {
+                Some("desktop-entry") => {
                 let app_name = next_required(
                     &mut args,
                     "uri desktop-entry requires <app_name> <exec_path>",
@@ -254,6 +277,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
             }
             Some(uri) => handle_install_uri(uri),
             None => Err("uri requires a linuxinstall:// or openinstall:// value".to_string()),
+        }
         },
         Some("publish") => publish_command(args),
         Some("serve") => serve_command(args),

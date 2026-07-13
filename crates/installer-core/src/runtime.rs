@@ -711,6 +711,8 @@ impl Installer {
         progress_tx: Option<&mpsc::Sender<InstallProgress>>,
     ) -> Result<(), InstallerError> {
         let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .connect_timeout(std::time::Duration::from_secs(30))
             .build()
             .map_err(|source| InstallerError::Download {
                 url: url.to_string(),

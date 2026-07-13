@@ -8,19 +8,48 @@ No new package format. No containers. Just a better first impression.
 
 ---
 
+## Supported distros
+
+| Distro | Package manager | Slot key |
+|--------|----------------|----------|
+| Arch Linux / Manjaro / EndeavourOS | pacman | `arch` |
+| Ubuntu / Debian / Mint / Pop!_OS | apt | `ubuntu` |
+| Fedora / RHEL / CentOS | dnf | `fedora` |
+| openSUSE | zypper | `opensuse` |
+| Anything with PackageKit | pkcon | `fallback` |
+| Anything else | — | `fallback` (AppImage, static binary) |
+
+## Requirements
+
+- **Linux** (tested on x86_64, aarch64)
+- **A package manager** from the table above (or PackageKit)
+- **curl/wget** (for the bootstrapper)
+- **GTK4 + libadwaita** (only for `installer-gui`)
+
 ## Quick start
 
 ```bash
 # detect your system
 installer detect
 
-# install from a manifest
+# install from a local manifest
 installer install ./cursor.json
 
-# verify integrity + signature
+# verify integrity + signature first
 installer verify ./cursor.json
 
-# full publish pipeline
+# install directly from a URL via URI
+installer openinstall://cursor?m=https://example.com/cursor.json
+
+# register the app as a URI handler for your scheme
+installer uri register Cursor /usr/bin/cursor openinstall
+```
+
+## End-to-end: developer to user
+
+### 1. Developer publishes a manifest
+
+```bash
 installer publish \
   --name "Cursor" \
   --publisher "Anysphere" \
@@ -31,28 +60,83 @@ installer publish \
   --output ./cursor.json
 ```
 
+### 2. Host the manifest and packages somewhere reachable
+
+A GitHub release, your own CDN, or a static server.
+
+### 3. User installs with one command
+
+```bash
+# via manifest URL directly
+installer install https://example.com/cursor.json
+
+# via install URI (browser link → installer)
+installer openinstall://cursor?m=https://example.com/cursor.json
+```
+
+The installer downloads the manifest, picks the right package for the user's distro, verifies sha256 and signature (if present), then hands it to the system package manager.
+
+### 4. (Optional) Register a URI handler
+
+After installation, register the app as a handler so clicking `openinstall://cursor` in a browser opens the installed app:
+
+```bash
+installer uri register Cursor /usr/bin/cursor openinstall
+```
+
 ## CLI
 
 ```
-installer detect                              # print distro/arch/package manager
-installer validate <manifest>                 # check manifest is correct
-installer select <manifest>                   # show which package matches your system
-installer show <manifest>                     # print everything about an app
-installer verify <manifest>                   # download + check sha256 + signature
-installer install <manifest>                  # download, verify, install
-installer remove <manifest>                   # uninstall
-installer update <manifest>                   # same as install
-installer reinstall <manifest>                # force reinstall
-installer rollback <manifest>                 # go back to previous cache version
-installer history <manifest>                  # installation history
-installer cache clear                         # nuke the cache
-installer cache info                          # show cache size
-installer publish --name ... (see above)      # generate a manifest
-installer serve <manifest> [addr]             # serve /app/latest on HTTP
-installer uri <scheme://app>                  # parse an install URI
-installer uri register <app> <path> [scheme]  # register URI handler
-installer signature verify <sig> <file>       # check ed25519 signature
+installer detect                                    print distro/arch/package manager
+installer validate <manifest>                       check manifest is correct
+installer select <manifest>                         show which package matches your system
+installer show <manifest>                           print everything about an app
+installer verify <manifest>                         download + check sha256 + signature
+installer install <manifest>                        download, verify, install
+installer remove <manifest>                         uninstall
+installer update <manifest>                         same as install
+installer reinstall <manifest>                      force reinstall
+installer rollback <manifest>                       go back to previous cache version
+installer history <manifest>                        installation history
+installer cache clear                               nuke the cache
+installer cache info                                show cache size
+installer publish --name ... (see above)            generate a manifest
+installer serve <manifest> [addr]                   serve /app/latest on HTTP
+
+# URI subcommands
+installer uri <scheme://app>                        parse URI and print details
+installer uri <scheme://app?m=manifest_url>         parse and install from manifest URL
+installer uri desktop-entry <name> <path> [scheme]  generate a .desktop file
+installer uri register <name> <path> [scheme]       register URI handler in the system
+installer uri help                                  show URI help
+
+# Direct URI (same as `installer uri ...` but as top-level command)
+installer openinstall://cursor?m=https://example.com/manifest.json
+
+installer signature verify <sig> <file>             check ed25519 signature
 ```
+
+### URI scheme
+
+Two supported schemes:
+
+- `openinstall://app_id`
+- `linuxinstall://app_id`
+
+Query parameters:
+
+| Param | Description |
+|-------|-------------|
+| `m` | Manifest URL (short form) |
+| `manifest` | Manifest URL (full name) |
+
+Example:
+
+```
+openinstall://cursor?m=https://example.com/manifest.json
+```
+
+If `?m=` or `?manifest=` is present, the installer downloads the manifest and runs the full install flow. Without it, the installer just prints the parsed components.
 
 ## GUI
 
@@ -81,7 +165,7 @@ Three crates, one dependency chain:
 
 ```
 installer-core     →  types, adapters, verification, installer runtime
-installer-cli      →  command-line interface (14+ commands)
+installer-cli      →  command-line interface (20+ commands)
 installer-gui      →  GTK4 / LibAdwaita window
 installer-bootstrapper →  tiny entry point for download + launch
 ```
@@ -118,6 +202,7 @@ See [docs/manifest.md](docs/manifest.md) for details.
 ## Security
 
 - All downloads go through TLS (`reqwest` + `rustls`)
+- Network requests have timeouts: 15s for manifests, 30s connect + 120s total for packages
 - SHA256 is checked before the package touches the package manager
 - Ed25519 signatures are verified with `ring`
 - If a signature is present and invalid, the install button disables and a red banner shows up
@@ -136,6 +221,7 @@ Tests:
 
 ```bash
 cargo test -p installer-core
+cargo test -p installer-cli
 ```
 
 The GUI requires GTK4 and libadwaita development headers on your system (`libgtk-4-dev` and `libadwaita-1-dev` on Debian/Ubuntu, `gtk4` and `libadwaita` on Arch, etc).

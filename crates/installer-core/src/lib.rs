@@ -229,6 +229,7 @@ impl Manifest {
 
     pub fn from_url(url: &url::Url) -> Result<Self, ManifestError> {
         let response = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
             .build()
             .map_err(|source| ManifestError::Http {
                 url: url.to_string(),
