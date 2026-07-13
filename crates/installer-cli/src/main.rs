@@ -8,6 +8,9 @@ use installer_core::{
     Manifest, PackageMatrix, PublishSpec, SignatureSpec,
 };
 
+#[cfg(all(feature = "gui", target_os = "linux"))]
+mod gui;
+
 fn main() -> ExitCode {
     match run(std::env::args().skip(1)) {
         Ok(()) => ExitCode::SUCCESS,
