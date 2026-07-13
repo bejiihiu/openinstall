@@ -202,15 +202,13 @@ fn setup_drag_drop(
     data: Rc<RefCell<UiData>>,
     refresh: RefreshFn,
 ) {
-    use gtk::gdk::ContentFormats;
     use gtk::gdk::DragAction;
 
-    let formats = ContentFormats::new(&["text/uri-list"]);
-    let drop_target = gtk::DropTarget::new(Some(&formats), DragAction::COPY);
+    let drop_target = gtk::DropTarget::new(glib::Type::STRING, DragAction::COPY);
     drop_target.connect_drop(move |_dt, value, _x, _y| {
-        let s = match value.get::<String>() {
-            Some(s) => s,
-            None => return false,
+        let s = match value.get::<Option<String>>() {
+            Some(Some(s)) => s,
+            _ => return false,
         };
         let uri = match s.split_whitespace().next() {
             Some(u) => u.to_string(),
