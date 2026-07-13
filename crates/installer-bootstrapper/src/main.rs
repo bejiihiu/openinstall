@@ -65,7 +65,8 @@ fn run(manifest_url: &str, headless: bool) -> Result<(), String> {
             cmd.arg("gui");
         }
         cmd.arg(dest.to_str().unwrap_or(""));
-        let status = cmd.status()
+        let status = cmd
+            .status()
             .map_err(|e| format!("launch installer-gui failed: {e}"))?;
         if !status.success() {
             return Err("installer-gui exited with error".to_string());

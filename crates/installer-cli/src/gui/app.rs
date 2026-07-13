@@ -197,17 +197,11 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     window.present();
 }
 
-fn setup_drag_drop(
-    window: &adw::ApplicationWindow,
-    data: Rc<RefCell<UiData>>,
-    refresh: RefreshFn,
-) {
+fn setup_drag_drop(window: &adw::ApplicationWindow, data: Rc<RefCell<UiData>>, refresh: RefreshFn) {
     use gtk::gdk::DragAction;
     use gtk::gdk::FileList;
 
-    let drop_target = gtk::DropTarget::builder()
-        .actions(DragAction::COPY)
-        .build();
+    let drop_target = gtk::DropTarget::builder().actions(DragAction::COPY).build();
     drop_target.set_types(&[FileList::static_type()]);
     drop_target.connect_drop(move |_dt, value, _x, _y| {
         let file_list = match value.get::<FileList>() {

@@ -442,20 +442,32 @@ fn register_gui_desktop() -> Result<(), String> {
     );
     let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
     let apps_dir = PathBuf::from(&home).join(".local/share/applications");
-    std::fs::create_dir_all(&apps_dir).map_err(|e| format!("failed to create {apps_dir:?}: {e}"))?;
+    std::fs::create_dir_all(&apps_dir)
+        .map_err(|e| format!("failed to create {apps_dir:?}: {e}"))?;
     let desktop_path = apps_dir.join("openinstall.desktop");
-    std::fs::write(&desktop_path, &desktop).map_err(|e| format!("failed to write desktop file: {e}"))?;
+    std::fs::write(&desktop_path, &desktop)
+        .map_err(|e| format!("failed to write desktop file: {e}"))?;
     println!("wrote: {}", desktop_path.display());
 
     if Command::new("xdg-mime").arg("--version").output().is_ok() {
         for scheme in &["openinstall", "openinstaller", "linuxinstall"] {
             let _ = Command::new("xdg-mime")
-                .args(["default", "openinstall.desktop", &format!("x-scheme-handler/{scheme}")])
+                .args([
+                    "default",
+                    "openinstall.desktop",
+                    &format!("x-scheme-handler/{scheme}"),
+                ])
                 .status();
         }
     }
-    if Command::new("update-desktop-database").arg("--version").output().is_ok() {
-        let _ = Command::new("update-desktop-database").arg(&apps_dir).status();
+    if Command::new("update-desktop-database")
+        .arg("--version")
+        .output()
+        .is_ok()
+    {
+        let _ = Command::new("update-desktop-database")
+            .arg(&apps_dir)
+            .status();
     }
     println!("OpenInstall registered in application menu");
     println!("URI schemes registered: openinstall://, openinstaller://, linuxinstall://");
