@@ -163,7 +163,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
                 }
             }
             Ok(())
-        },
+        }
         Some("reinstall") => {
             let manifest = load_manifest(args.next(), "reinstall")?;
             let installer = Installer::default();
@@ -174,7 +174,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
             println!("reinstall command: {}", outcome.command);
             println!("staged path: {}", outcome.staged_path.display());
             Ok(())
-        },
+        }
         Some("uri") => match args.next().as_deref() {
             Some("desktop-entry") => {
                 let app_name = next_required(
@@ -208,10 +208,8 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
                 let uri = InstallUri::parse(&format!("{scheme}://{app_name}"))
                     .map_err(|error| error.to_string())?;
                 let desktop_content = desktop_entry_for_install_uri(&app_name, &exec_path, &uri);
-                let home =
-                    std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
-                let apps_dir =
-                    PathBuf::from(&home).join(".local/share/applications");
+                let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
+                let apps_dir = PathBuf::from(&home).join(".local/share/applications");
                 fs::create_dir_all(&apps_dir)
                     .map_err(|e| format!("failed to create {:?}: {e}", apps_dir))?;
                 let desktop_path = apps_dir.join(format!("{app_name}.desktop"));
@@ -219,11 +217,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
                     .map_err(|e| format!("failed to write {:?}: {e}", desktop_path))?;
                 println!("wrote: {}", desktop_path.display());
 
-                if Command::new("xdg-mime")
-                    .arg("--version")
-                    .output()
-                    .is_ok()
-                {
+                if Command::new("xdg-mime").arg("--version").output().is_ok() {
                     let desktop_file = format!("{app_name}.desktop");
                     let mime_type = format!("x-scheme-handler/{scheme}");
                     if let Err(e) = Command::new("xdg-mime")

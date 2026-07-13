@@ -1,7 +1,11 @@
 use crate::InstallUri;
 
 fn escape_desktop_value(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "\\r").replace(';', "\\;")
+    value
+        .replace('\\', "\\\\")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace(';', "\\;")
 }
 
 pub fn desktop_entry(app_name: &str, exec_path: &str, icon_name: Option<&str>) -> String {
@@ -23,7 +27,10 @@ pub fn desktop_entry_for_install_uri(app_name: &str, exec_path: &str, uri: &Inst
     } else {
         Some(uri.app_id.as_str())
     };
-    let mime_line = format!("MimeType=x-scheme-handler/{};\n", escape_desktop_value(&uri.scheme));
+    let mime_line = format!(
+        "MimeType=x-scheme-handler/{};\n",
+        escape_desktop_value(&uri.scheme)
+    );
     let icon_line = icon
         .map(|icon| format!("Icon={}\n", escape_desktop_value(icon)))
         .unwrap_or_default();
@@ -43,7 +50,9 @@ mod tests {
         assert!(result.contains("Name=TestApp"));
         assert!(result.contains("Exec=/usr/bin/test %u"));
         assert!(result.contains("Icon=test-icon"));
-        assert!(result.contains("MimeType=x-scheme-handler/linuxinstall;x-scheme-handler/openinstall;"));
+        assert!(
+            result.contains("MimeType=x-scheme-handler/linuxinstall;x-scheme-handler/openinstall;")
+        );
     }
 
     #[test]

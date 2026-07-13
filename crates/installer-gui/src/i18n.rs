@@ -48,7 +48,9 @@ fn en(key: &str) -> &str {
         "manifest.reload" => "Reload",
         "manifest.cache_info" => "Cache Info",
         "manifest.history" => "History",
-        "manifest.signature_warning" => "SIGNATURE VERIFICATION FAILED — this package may be tampered with",
+        "manifest.signature_warning" => {
+            "SIGNATURE VERIFICATION FAILED — this package may be tampered with"
+        }
         "state.not_installed" => "Not installed",
         "state.same_version" => "Already installed",
         "state.update_available" => "Update available",
@@ -103,7 +105,12 @@ mod tests {
         fn new(vars: &[&'static str]) -> Self {
             let saved = vars
                 .iter()
-                .map(|k| (*k, std::env::var_os(k).map(|v| v.to_string_lossy().to_string())))
+                .map(|k| {
+                    (
+                        *k,
+                        std::env::var_os(k).map(|v| v.to_string_lossy().to_string()),
+                    )
+                })
                 .collect();
             EnvGuard { vars: saved }
         }
@@ -139,22 +146,54 @@ mod tests {
     #[test]
     fn english_translations_exist_for_all_keys() {
         let keys = [
-            "app.title", "app.subtitle", "manifest.install", "manifest.reinstall",
-            "manifest.update", "manifest.remove", "manifest.rollback", "manifest.verify",
-            "manifest.reload", "manifest.cache_info", "manifest.history",
-            "state.not_installed", "state.same_version", "state.update_available",
-            "state.current_version", "state.available_version",
-            "detail.publisher", "detail.version", "detail.license", "detail.homepage",
-            "detail.changelog", "detail.architecture", "detail.distribution",
-            "detail.package_manager", "detail.package", "detail.integrity",
-            "detail.signature", "detail.available", "detail.not_set", "detail.not_provided",
-            "detail.valid", "detail.invalid",
-            "install.progress", "install.downloaded", "install.speed",
-            "install.cancel", "install.logs",
-            "done.title", "done.launch", "done.close", "done.open_folder",
-            "error.title", "error.close",
-            "verify.sha256_ok", "verify.sha256_mismatch",
-            "verify.signature_ok", "verify.signature_invalid", "verify.signature_missing",
+            "app.title",
+            "app.subtitle",
+            "manifest.install",
+            "manifest.reinstall",
+            "manifest.update",
+            "manifest.remove",
+            "manifest.rollback",
+            "manifest.verify",
+            "manifest.reload",
+            "manifest.cache_info",
+            "manifest.history",
+            "state.not_installed",
+            "state.same_version",
+            "state.update_available",
+            "state.current_version",
+            "state.available_version",
+            "detail.publisher",
+            "detail.version",
+            "detail.license",
+            "detail.homepage",
+            "detail.changelog",
+            "detail.architecture",
+            "detail.distribution",
+            "detail.package_manager",
+            "detail.package",
+            "detail.integrity",
+            "detail.signature",
+            "detail.available",
+            "detail.not_set",
+            "detail.not_provided",
+            "detail.valid",
+            "detail.invalid",
+            "install.progress",
+            "install.downloaded",
+            "install.speed",
+            "install.cancel",
+            "install.logs",
+            "done.title",
+            "done.launch",
+            "done.close",
+            "done.open_folder",
+            "error.title",
+            "error.close",
+            "verify.sha256_ok",
+            "verify.sha256_mismatch",
+            "verify.signature_ok",
+            "verify.signature_invalid",
+            "verify.signature_missing",
         ];
         for key in keys {
             let value = t(Locale::En, key);

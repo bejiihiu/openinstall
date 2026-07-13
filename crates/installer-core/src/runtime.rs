@@ -637,12 +637,10 @@ impl Installer {
             }
         }
 
-        let status = child
-            .wait()
-            .map_err(|source| InstallerError::Command {
-                command: command.to_string(),
-                source,
-            })?;
+        let status = child.wait().map_err(|source| InstallerError::Command {
+            command: command.to_string(),
+            source,
+        })?;
 
         if !status.success() {
             return Err(InstallerError::CommandStatus {
@@ -806,11 +804,10 @@ impl Installer {
                 path: tmp_path.clone(),
                 source,
             })?;
-            tmp.write_all(&json)
-                .map_err(|source| InstallerError::Io {
-                    path: tmp_path.clone(),
-                    source,
-                })?;
+            tmp.write_all(&json).map_err(|source| InstallerError::Io {
+                path: tmp_path.clone(),
+                source,
+            })?;
             tmp.sync_all().map_err(|source| InstallerError::Io {
                 path: tmp_path.clone(),
                 source,
@@ -1131,15 +1128,27 @@ mod tests {
 
     #[test]
     fn asset_suffix_for_fedora_and_opensuse() {
-        let fed = ResolvedPackage { slot: crate::PackageSlot::Fedora, package_manager: PackageManager::Dnf, reference: "" };
-        let suse = ResolvedPackage { slot: crate::PackageSlot::OpenSuse, package_manager: PackageManager::Zypper, reference: "" };
+        let fed = ResolvedPackage {
+            slot: crate::PackageSlot::Fedora,
+            package_manager: PackageManager::Dnf,
+            reference: "",
+        };
+        let suse = ResolvedPackage {
+            slot: crate::PackageSlot::OpenSuse,
+            package_manager: PackageManager::Zypper,
+            reference: "",
+        };
         assert_eq!(asset_suffix_for_package(&fed), ".rpm");
         assert_eq!(asset_suffix_for_package(&suse), ".rpm");
     }
 
     #[test]
     fn asset_suffix_for_fallback() {
-        let pkg = ResolvedPackage { slot: crate::PackageSlot::Fallback, package_manager: PackageManager::PackageKit, reference: "" };
+        let pkg = ResolvedPackage {
+            slot: crate::PackageSlot::Fallback,
+            package_manager: PackageManager::PackageKit,
+            reference: "",
+        };
         assert_eq!(asset_suffix_for_package(&pkg), ".AppImage");
     }
 

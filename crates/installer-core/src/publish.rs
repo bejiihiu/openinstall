@@ -128,6 +128,9 @@ mod tests {
         let spec = sample_spec();
         let manifest = spec.to_manifest();
         assert_eq!(manifest.name, "TestApp");
-        assert_eq!(manifest.packages.arch.as_deref(), Some("https://example.com/test.pkg.tar.zst"));
+        assert_eq!(
+            manifest.packages.arch.as_deref(),
+            Some("https://example.com/test.pkg.tar.zst")
+        );
     }
 }

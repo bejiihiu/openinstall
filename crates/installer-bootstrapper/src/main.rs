@@ -32,8 +32,7 @@ fn run(manifest_url: &str, headless: bool) -> Result<(), String> {
         .ok_or_else(|| "no package available for this environment".to_string())?;
 
     let cache_dir = default_cache_dir();
-    std::fs::create_dir_all(&cache_dir)
-        .map_err(|e| format!("failed to create cache dir: {e}"))?;
+    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("failed to create cache dir: {e}"))?;
 
     let dest = cache_dir.join(package_file_name(&manifest, package.reference));
     let client = reqwest::blocking::Client::builder()
@@ -44,9 +43,7 @@ fn run(manifest_url: &str, headless: bool) -> Result<(), String> {
         .send()
         .and_then(|r| r.error_for_status())
         .map_err(|e| format!("download failed: {e}"))?;
-    let bytes = response
-        .bytes()
-        .map_err(|e| format!("read failed: {e}"))?;
+    let bytes = response.bytes().map_err(|e| format!("read failed: {e}"))?;
     std::fs::write(&dest, &bytes).map_err(|e| format!("write failed: {e}"))?;
 
     if headless {
@@ -182,7 +179,12 @@ mod tests {
         fn new(vars: &[&'static str]) -> Self {
             let saved = vars
                 .iter()
-                .map(|k| (*k, std::env::var_os(k).map(|v| v.to_string_lossy().to_string())))
+                .map(|k| {
+                    (
+                        *k,
+                        std::env::var_os(k).map(|v| v.to_string_lossy().to_string()),
+                    )
+                })
                 .collect();
             EnvGuard { vars: saved }
         }

@@ -65,8 +65,9 @@ pub fn run() {
             None => (Some(demo_manifest()), None),
         };
 
-        let install_state =
-            manifest.as_ref().and_then(|m| installer.inspect(m, &environment).ok());
+        let install_state = manifest
+            .as_ref()
+            .and_then(|m| installer.inspect(m, &environment).ok());
 
         let data = Rc::new(RefCell::new(UiData {
             locale,
@@ -194,7 +195,11 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     window.present();
 }
 
-fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sender<ProgressUpdate>) {
+fn render_manifest(
+    data: &Rc<RefCell<UiData>>,
+    parent: &gtk::Box,
+    tx: &mpsc::Sender<ProgressUpdate>,
+) {
     let current = data.borrow();
     let locale = current.locale;
     let manifest = match &current.manifest {
@@ -218,7 +223,10 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
     scroll.set_child(Some(&content));
     parent.append(&scroll);
 
-    if verification.as_ref().is_some_and(|v| v.signature_ok == Some(false)) {
+    if verification
+        .as_ref()
+        .is_some_and(|v| v.signature_ok == Some(false))
+    {
         let warn = gtk::Label::builder()
             .label(t(locale, "manifest.signature_warning"))
             .xalign(0.0)
@@ -248,11 +256,19 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
 
     let pub_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let pub_label = gtk::Label::builder()
-        .label(format!("{}: {}", t(locale, "detail.publisher"), manifest.publisher))
+        .label(format!(
+            "{}: {}",
+            t(locale, "detail.publisher"),
+            manifest.publisher
+        ))
         .xalign(0.0)
         .build();
     let ver_label = gtk::Label::builder()
-        .label(format!("{}: {}", t(locale, "detail.version"), manifest.version))
+        .label(format!(
+            "{}: {}",
+            t(locale, "detail.version"),
+            manifest.version
+        ))
         .xalign(0.0)
         .build();
     pub_row.append(&pub_label);
@@ -276,27 +292,56 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
 
     add_detail_row(&group, t(locale, "detail.publisher"), &manifest.publisher);
     add_detail_row(&group, t(locale, "detail.version"), &manifest.version);
-    add_detail_row(&group, t(locale, "detail.license"), manifest.license.as_deref().unwrap_or(t(locale, "detail.not_set")));
-    add_detail_row(&group, t(locale, "detail.homepage"), manifest.homepage.as_deref().unwrap_or(t(locale, "detail.not_set")));
+    add_detail_row(
+        &group,
+        t(locale, "detail.license"),
+        manifest
+            .license
+            .as_deref()
+            .unwrap_or(t(locale, "detail.not_set")),
+    );
+    add_detail_row(
+        &group,
+        t(locale, "detail.homepage"),
+        manifest
+            .homepage
+            .as_deref()
+            .unwrap_or(t(locale, "detail.not_set")),
+    );
     add_detail_row(&group, t(locale, "detail.architecture"), &env.architecture);
     add_detail_row(&group, t(locale, "detail.distribution"), &env.distro);
-    add_detail_row(&group, t(locale, "detail.package_manager"), &env.package_manager.to_string());
+    add_detail_row(
+        &group,
+        t(locale, "detail.package_manager"),
+        &env.package_manager.to_string(),
+    );
     if let Some(changelog) = &manifest.changelog {
         add_detail_row(&group, t(locale, "detail.changelog"), changelog);
     }
 
-    let integrity = manifest.sha256.as_deref().map(|_| t(locale, "detail.available")).unwrap_or(t(locale, "detail.not_set"));
+    let integrity = manifest
+        .sha256
+        .as_deref()
+        .map(|_| t(locale, "detail.available"))
+        .unwrap_or(t(locale, "detail.not_set"));
     add_detail_row(&group, t(locale, "detail.integrity"), integrity);
 
     let sig_status = match &verification {
         Some(v) => {
-            if v.signature_ok == Some(true) { t(locale, "detail.valid") }
-            else if v.signature_ok == Some(false) { t(locale, "detail.invalid") }
-            else { t(locale, "detail.not_provided") }
+            if v.signature_ok == Some(true) {
+                t(locale, "detail.valid")
+            } else if v.signature_ok == Some(false) {
+                t(locale, "detail.invalid")
+            } else {
+                t(locale, "detail.not_provided")
+            }
         }
         None => {
-            if manifest.signature.is_some() { t(locale, "detail.available") }
-            else { t(locale, "detail.not_provided") }
+            if manifest.signature.is_some() {
+                t(locale, "detail.available")
+            } else {
+                t(locale, "detail.not_provided")
+            }
         }
     };
     add_detail_row(&group, t(locale, "detail.signature"), sig_status);
@@ -316,9 +361,16 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
             state_label.set_label(t(locale, "state.not_installed"));
         }
         Some(InstallationState::SameVersion { version }) => {
-            state_label.set_label(&format!("{} ({})", t(locale, "state.same_version"), version));
+            state_label.set_label(&format!(
+                "{} ({})",
+                t(locale, "state.same_version"),
+                version
+            ));
         }
-        Some(InstallationState::DifferentVersion { current_version, available_version }) => {
+        Some(InstallationState::DifferentVersion {
+            current_version,
+            available_version,
+        }) => {
             state_label.set_label(&format!(
                 "{}: {} \u{2192} {}",
                 t(locale, "state.update_available"),
@@ -334,7 +386,11 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
         let vbox = gtk::Box::new(gtk::Orientation::Vertical, 4);
         let sha_label = gtk::Label::builder()
             .xalign(0.0)
-            .label(if v.sha256_ok { t(locale, "verify.sha256_ok") } else { t(locale, "verify.sha256_mismatch") })
+            .label(if v.sha256_ok {
+                t(locale, "verify.sha256_ok")
+            } else {
+                t(locale, "verify.sha256_mismatch")
+            })
             .build();
         vbox.append(&sha_label);
         let sig_label_text = match v.signature_ok {
@@ -383,7 +439,9 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
     content.append(&button_box);
 
     let has_pkg = selection.is_some();
-    let bad_sig = verification.as_ref().is_some_and(|v| v.signature_ok == Some(false));
+    let bad_sig = verification
+        .as_ref()
+        .is_some_and(|v| v.signature_ok == Some(false));
     install_btn.set_sensitive(has_pkg && !bad_sig);
     remove_btn.set_sensitive(has_pkg);
     verify_btn.set_sensitive(has_pkg);
@@ -413,7 +471,8 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
                     }
                 }
             });
-            let result = installer.install_with_progress(&m, &env, progress_tx)
+            let result = installer
+                .install_with_progress(&m, &env, progress_tx)
                 .map(|o| (o.command, o.staged_path))
                 .map_err(|e| e.to_string());
             let _ = tx.send(ProgressUpdate::InstallResult(result));
@@ -435,7 +494,8 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
                 Some(ref m) => m.clone(),
                 None => return,
             };
-            let result = installer.remove(&m, &env)
+            let result = installer
+                .remove(&m, &env)
                 .map(|o| (o.command, o.staged_path))
                 .map_err(|e| e.to_string());
             let _ = tx.send(ProgressUpdate::RemoveResult(result));
@@ -474,7 +534,8 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
                 Some(ref m) => m.clone(),
                 None => return,
             };
-            let result = installer.rollback(&m, &env)
+            let result = installer
+                .rollback(&m, &env)
                 .map(|o| (o.command, o.staged_path))
                 .map_err(|e| e.to_string());
             let _ = tx.send(ProgressUpdate::RollbackResult(result));
@@ -496,7 +557,9 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
             },
             None => (Some(demo_manifest()), None),
         };
-        let install_state = manifest.as_ref().and_then(|m| installer.inspect(m, &env).ok());
+        let install_state = manifest
+            .as_ref()
+            .and_then(|m| installer.inspect(m, &env).ok());
         d.environment = env;
         d.installer = installer;
         d.manifest = manifest;
@@ -511,9 +574,10 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
     let data_cache = Rc::clone(data);
     cache_btn.connect_clicked(move |_| {
         let installer = data_cache.borrow().installer.clone();
-        let result = installer.cache_info().map(|info| {
-            format!("{} files, {} bytes", info.file_count, info.total_bytes)
-        }).unwrap_or_else(|e| e.to_string());
+        let result = installer
+            .cache_info()
+            .map(|info| format!("{} files, {} bytes", info.file_count, info.total_bytes))
+            .unwrap_or_else(|e| e.to_string());
         // Show in a transient dialog using gtk::AlertDialog (GTK4)
         let dialog = gtk::AlertDialog::builder()
             .message(t(data_cache.borrow().locale, "manifest.cache_info"))
@@ -525,16 +589,28 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
     let data_history = Rc::clone(data);
     history_btn.connect_clicked(move |_| {
         let installer = data_history.borrow().installer.clone();
-        let result = installer.get_history().map(|entries| {
-            if entries.is_empty() {
-                "No history".to_string()
-            } else {
-                entries.iter().map(|e| {
-                    format!("{} v{} via {} — {}",
-                        e.package_id, e.version, e.package_manager, e.installed_at_unix_secs)
-                }).collect::<Vec<_>>().join("\n")
-            }
-        }).unwrap_or_else(|e| e.to_string());
+        let result = installer
+            .get_history()
+            .map(|entries| {
+                if entries.is_empty() {
+                    "No history".to_string()
+                } else {
+                    entries
+                        .iter()
+                        .map(|e| {
+                            format!(
+                                "{} v{} via {} — {}",
+                                e.package_id,
+                                e.version,
+                                e.package_manager,
+                                e.installed_at_unix_secs
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                }
+            })
+            .unwrap_or_else(|e| e.to_string());
         let dialog = gtk::AlertDialog::builder()
             .message(t(data_history.borrow().locale, "manifest.history"))
             .detail(&result)

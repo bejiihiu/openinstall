@@ -46,9 +46,7 @@ impl SignatureSpec {
             });
         }
         if signature_hex.len() != 128 {
-            return Err(SignatureError::InvalidHex {
-                field: "signature",
-            });
+            return Err(SignatureError::InvalidHex { field: "signature" });
         }
 
         Ok(Self {

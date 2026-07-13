@@ -641,31 +641,51 @@ mod tests {
 
     #[test]
     fn preferred_slot_arch_by_pacman() {
-        let env = Environment { distro: "unknown".into(), architecture: "x86_64".into(), package_manager: PackageManager::Pacman };
+        let env = Environment {
+            distro: "unknown".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Pacman,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Arch);
     }
 
     #[test]
     fn preferred_slot_arch_by_distro() {
-        let env = Environment { distro: "arch linux".into(), architecture: "x86_64".into(), package_manager: PackageManager::Unknown };
+        let env = Environment {
+            distro: "arch linux".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Unknown,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Arch);
     }
 
     #[test]
     fn preferred_slot_ubuntu_by_apt() {
-        let env = Environment { distro: "unknown".into(), architecture: "x86_64".into(), package_manager: PackageManager::Apt };
+        let env = Environment {
+            distro: "unknown".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Apt,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Ubuntu);
     }
 
     #[test]
     fn preferred_slot_fedora_by_dnf() {
-        let env = Environment { distro: "unknown".into(), architecture: "x86_64".into(), package_manager: PackageManager::Dnf };
+        let env = Environment {
+            distro: "unknown".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Dnf,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Fedora);
     }
 
     #[test]
     fn preferred_slot_opensuse_by_zypper() {
-        let env = Environment { distro: "opensuse tumbleweed".into(), architecture: "x86_64".into(), package_manager: PackageManager::Zypper };
+        let env = Environment {
+            distro: "opensuse tumbleweed".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Zypper,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::OpenSuse);
     }
 
@@ -677,19 +697,31 @@ mod tests {
 
     #[test]
     fn preferred_slot_fallback_by_packagekit() {
-        let env = Environment { distro: "unknown".into(), architecture: "x86_64".into(), package_manager: PackageManager::PackageKit };
+        let env = Environment {
+            distro: "unknown".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::PackageKit,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Fallback);
     }
 
     #[test]
     fn preferred_slot_centos_maps_fedora() {
-        let env = Environment { distro: "centos stream 9".into(), architecture: "x86_64".into(), package_manager: PackageManager::Unknown };
+        let env = Environment {
+            distro: "centos stream 9".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Unknown,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Fedora);
     }
 
     #[test]
     fn preferred_slot_debian_maps_ubuntu() {
-        let env = Environment { distro: "debian bookworm".into(), architecture: "x86_64".into(), package_manager: PackageManager::Unknown };
+        let env = Environment {
+            distro: "debian bookworm".into(),
+            architecture: "x86_64".into(),
+            package_manager: PackageManager::Unknown,
+        };
         assert_eq!(preferred_slot(&env), PackageSlot::Ubuntu);
     }
 
@@ -734,21 +766,48 @@ mod tests {
 
     #[test]
     fn package_manager_for_slot_matches() {
-        assert_eq!(package_manager_for_slot(PackageSlot::Arch), PackageManager::Pacman);
-        assert_eq!(package_manager_for_slot(PackageSlot::Ubuntu), PackageManager::Apt);
-        assert_eq!(package_manager_for_slot(PackageSlot::Fedora), PackageManager::Dnf);
-        assert_eq!(package_manager_for_slot(PackageSlot::OpenSuse), PackageManager::Zypper);
-        assert_eq!(package_manager_for_slot(PackageSlot::Fallback), PackageManager::PackageKit);
+        assert_eq!(
+            package_manager_for_slot(PackageSlot::Arch),
+            PackageManager::Pacman
+        );
+        assert_eq!(
+            package_manager_for_slot(PackageSlot::Ubuntu),
+            PackageManager::Apt
+        );
+        assert_eq!(
+            package_manager_for_slot(PackageSlot::Fedora),
+            PackageManager::Dnf
+        );
+        assert_eq!(
+            package_manager_for_slot(PackageSlot::OpenSuse),
+            PackageManager::Zypper
+        );
+        assert_eq!(
+            package_manager_for_slot(PackageSlot::Fallback),
+            PackageManager::PackageKit
+        );
     }
 
     #[test]
     fn manifest_first_available_respects_order() {
         let manifest = Manifest {
-            name: "Test".to_string(), publisher: "Pub".to_string(), version: "1".to_string(),
-            description: "desc".to_string(), homepage: None, license: None, changelog: None,
+            name: "Test".to_string(),
+            publisher: "Pub".to_string(),
+            version: "1".to_string(),
+            description: "desc".to_string(),
+            homepage: None,
+            license: None,
+            changelog: None,
             image: None,
-            packages: PackageMatrix { arch: None, ubuntu: Some("u.deb".into()), fedora: None, opensuse: None, fallback: Some("f.AppImage".into()) },
-            sha256: None, signature: None,
+            packages: PackageMatrix {
+                arch: None,
+                ubuntu: Some("u.deb".into()),
+                fedora: None,
+                opensuse: None,
+                fallback: Some("f.AppImage".into()),
+            },
+            sha256: None,
+            signature: None,
         };
         let pkg = manifest.first_available_package().unwrap();
         assert_eq!(pkg.slot, PackageSlot::Ubuntu);
@@ -757,12 +816,25 @@ mod tests {
     #[test]
     fn manifest_validate_empty_name_rejected() {
         let manifest = Manifest {
-            name: "".to_string(), publisher: "Pub".to_string(), version: "1".to_string(),
-            description: "desc".to_string(), homepage: None, license: None, changelog: None,
-            image: None, packages: PackageMatrix { arch: Some("x".into()), ..PackageMatrix::default() },
-            sha256: None, signature: None,
+            name: "".to_string(),
+            publisher: "Pub".to_string(),
+            version: "1".to_string(),
+            description: "desc".to_string(),
+            homepage: None,
+            license: None,
+            changelog: None,
+            image: None,
+            packages: PackageMatrix {
+                arch: Some("x".into()),
+                ..PackageMatrix::default()
+            },
+            sha256: None,
+            signature: None,
         };
-        assert!(matches!(manifest.validate(), Err(ManifestError::Validation(_))));
+        assert!(matches!(
+            manifest.validate(),
+            Err(ManifestError::Validation(_))
+        ));
     }
 
     #[test]
@@ -797,7 +869,15 @@ mod tests {
         let pm = detect_package_manager(Some(&os));
         // on the CI runner this will detect whatever is on PATH
         // just checking it doesn't panic and returns a valid value
-        assert!(matches!(pm, PackageManager::Apt | PackageManager::Dnf | PackageManager::Pacman | PackageManager::Zypper | PackageManager::PackageKit | PackageManager::Unknown));
+        assert!(matches!(
+            pm,
+            PackageManager::Apt
+                | PackageManager::Dnf
+                | PackageManager::Pacman
+                | PackageManager::Zypper
+                | PackageManager::PackageKit
+                | PackageManager::Unknown
+        ));
     }
 
     #[test]
@@ -959,9 +1039,7 @@ mod tests {
             signature: None,
         };
 
-        let env = Environment::from_os_release(
-            "ID=unknown\nPRETTY_NAME=\"Unknown\"\n",
-        );
+        let env = Environment::from_os_release("ID=unknown\nPRETTY_NAME=\"Unknown\"\n");
         let selection = manifest
             .package_for_environment(&env)
             .expect("should return fallback");
@@ -990,16 +1068,11 @@ mod tests {
             signature: None,
         };
 
-        let env = Environment::from_os_release(
-            "ID=ubuntu\nID_LIKE=debian\n",
-        );
+        let env = Environment::from_os_release("ID=ubuntu\nID_LIKE=debian\n");
         let selection = manifest
             .package_for_environment(&env)
             .expect("should return ubuntu");
         assert_eq!(selection.slot, PackageSlot::Ubuntu);
-        assert_eq!(
-            selection.reference,
-            "https://example.com/test.deb"
-        );
+        assert_eq!(selection.reference, "https://example.com/test.deb");
     }
 }

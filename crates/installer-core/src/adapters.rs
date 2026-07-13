@@ -204,14 +204,22 @@ impl PackageAdapter for PackageKitAdapter {
     fn install_command(&self, staged_path: &str) -> (String, Vec<String>) {
         (
             "pkcon".to_string(),
-            vec!["install-local".into(), "--noninteractive".into(), staged_path.to_string()],
+            vec![
+                "install-local".into(),
+                "--noninteractive".into(),
+                staged_path.to_string(),
+            ],
         )
     }
 
     fn remove_command(&self, package_id: &str) -> (String, Vec<String>) {
         (
             "pkcon".to_string(),
-            vec!["remove".into(), "--noninteractive".into(), package_id.to_string()],
+            vec![
+                "remove".into(),
+                "--noninteractive".into(),
+                package_id.to_string(),
+            ],
         )
     }
 
@@ -263,7 +271,10 @@ mod tests {
         let adapter = PackageKitAdapter;
         let (command, args) = adapter.install_command("/tmp/test-pkg.deb");
         assert_eq!(command, "pkcon");
-        assert_eq!(args, vec!["install-local", "--noninteractive", "/tmp/test-pkg.deb"]);
+        assert_eq!(
+            args,
+            vec!["install-local", "--noninteractive", "/tmp/test-pkg.deb"]
+        );
     }
 
     #[test]
@@ -295,7 +306,10 @@ mod tests {
         let adapter = ZypperAdapter;
         let (command, args) = adapter.install_command("/cache/test.rpm");
         assert_eq!(command, "zypper");
-        assert_eq!(args, vec!["--non-interactive", "install", "/cache/test.rpm"]);
+        assert_eq!(
+            args,
+            vec!["--non-interactive", "install", "/cache/test.rpm"]
+        );
     }
 
     #[test]

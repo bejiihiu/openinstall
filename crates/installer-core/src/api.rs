@@ -70,7 +70,8 @@ fn handle_connection(mut stream: TcpStream, body: &[u8]) -> Result<(), ApiError>
     let (method, path, _version) = match parse_request_line(&request_line) {
         Some(parsed) => parsed,
         None => {
-            let bad_request = b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            let bad_request =
+                b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
             stream.write_all(bad_request)?;
             stream.flush()?;
             return Ok(());
