@@ -12,7 +12,7 @@ use installer_core::{
     Environment, InstallProgress, InstallStage, InstallationState, Manifest, VerificationOutcome,
 };
 
-use crate::i18n::{t, Locale};
+use installer_gui::i18n::{t, Locale};
 
 enum ProgressUpdate {
     Progress(InstallProgress),

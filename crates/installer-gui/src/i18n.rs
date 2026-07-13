@@ -130,19 +130,15 @@ mod tests {
             "verify.sha256_ok", "verify.sha256_mismatch",
             "verify.signature_ok", "verify.signature_invalid", "verify.signature_missing",
         ];
-        for key in &keys {
+        for key in keys {
             let value = t(Locale::En, key);
             assert!(!value.is_empty(), "missing EN translation for {key}");
-            assert_ne!(value, key, "EN translation for {key} is the key itself");
+            assert_ne!(value, *key, "EN translation for {key} is the key itself");
         }
     }
 
     #[test]
     fn russian_translations_cover_most_keys() {
-        let ru_count = (0..200)
-            .filter_map(|_| ru(""))
-            .count();
-        // Actually test a few specific ones
         assert_eq!(t(Locale::Ru, "app.subtitle"), "Установщик приложений Linux");
         assert_eq!(t(Locale::Ru, "manifest.install"), "Установить");
         assert_eq!(t(Locale::Ru, "done.title"), "Установка завершена");
