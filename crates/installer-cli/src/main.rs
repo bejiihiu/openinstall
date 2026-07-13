@@ -19,7 +19,16 @@ fn main() -> ExitCode {
 }
 
 fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
-    match args.next().as_deref() {
+    let command = args.next();
+
+    // Direct install URI as top-level command (e.g. from OS custom URI handler)
+    if let Some(ref arg) = command {
+        if arg.contains("://") {
+            return handle_install_uri(arg);
+        }
+    }
+
+    match command.as_deref() {
         None | Some("help") | Some("--help") | Some("-h") => {
             print_help();
             Ok(())
@@ -243,12 +252,7 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
 
                 Ok(())
             }
-            Some(uri) => {
-                let parsed = InstallUri::parse(uri).map_err(|error| error.to_string())?;
-                println!("scheme: {}", parsed.scheme);
-                println!("app id: {}", parsed.app_id);
-                Ok(())
-            }
+            Some(uri) => handle_install_uri(uri),
             None => Err("uri requires a linuxinstall:// or openinstall:// value".to_string()),
         },
         Some("publish") => publish_command(args),
@@ -295,6 +299,31 @@ fn print_manifest(manifest: &Manifest, environment: &Environment, installer: &In
     }
 }
 
+fn handle_install_uri(uri_str: &str) -> Result<(), String> {
+    let uri = InstallUri::parse(uri_str).map_err(|e| e.to_string())?;
+
+    if let Some(manifest_url) = &uri.manifest_url {
+        println!("app: {}", uri.app_id);
+        println!("manifest: {}", manifest_url);
+        let manifest = Manifest::from_url(manifest_url).map_err(|e| e.to_string())?;
+        let installer = Installer::default();
+        let environment = Environment::detect();
+        let outcome = installer
+            .install(&manifest, &environment)
+            .map_err(|e| e.to_string())?;
+        println!("install command: {}", outcome.command);
+        println!("staged path: {}", outcome.staged_path.display());
+        Ok(())
+    } else {
+        println!("scheme: {}", uri.scheme);
+        println!("app id: {}", uri.app_id);
+        if !uri.has_manifest() {
+            println!("hint: add ?m=<manifest_url> to the URI for direct installation");
+        }
+        Ok(())
+    }
+}
+
 fn load_manifest(path: Option<String>, command: &str) -> Result<Manifest, String> {
     let path = path.ok_or_else(|| format!("{command} requires a manifest path"))?;
     let path = PathBuf::from(path);
@@ -303,7 +332,7 @@ fn load_manifest(path: Option<String>, command: &str) -> Result<Manifest, String
 
 fn print_help() {
     println!(
-        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  signature verify <signature> <file>\n  help"
+        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
     );
 }
 

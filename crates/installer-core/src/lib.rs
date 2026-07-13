@@ -212,6 +212,12 @@ pub enum ManifestError {
         #[source]
         source: std::io::Error,
     },
+    #[error("failed to fetch manifest from {url}: {source}")]
+    Http {
+        url: String,
+        #[source]
+        source: reqwest::Error,
+    },
     #[error("failed to parse manifest: {0}")]
     Parse(#[from] serde_json::Error),
 }
@@ -219,6 +225,29 @@ pub enum ManifestError {
 impl Manifest {
     pub fn from_json_str(input: &str) -> Result<Self, ManifestError> {
         serde_json::from_str(input).map_err(ManifestError::from)
+    }
+
+    pub fn from_url(url: &url::Url) -> Result<Self, ManifestError> {
+        let response = reqwest::blocking::Client::builder()
+            .build()
+            .map_err(|source| ManifestError::Http {
+                url: url.to_string(),
+                source,
+            })?
+            .get(url.as_str())
+            .send()
+            .and_then(|r| r.error_for_status())
+            .map_err(|source| ManifestError::Http {
+                url: url.to_string(),
+                source,
+            })?;
+        let text = response
+            .text()
+            .map_err(|source| ManifestError::Http {
+                url: url.to_string(),
+                source,
+            })?;
+        Self::from_json_str(&text)
     }
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
