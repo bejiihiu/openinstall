@@ -117,7 +117,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     nav.push(&nav_page);
 
     let refresh: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
-    let refresh_weak = Rc::clone(&refresh);
+    let _refresh_weak = Rc::clone(&refresh);
 
     let data_c = Rc::clone(&data);
     let tx_c = tx.clone();
@@ -486,7 +486,7 @@ fn render_manifest(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, tx: &mpsc::Sen
         let installer = Installer::default();
         let (manifest, _) = match path.as_ref() {
             Some(p) => match Manifest::from_path(p) {
-                Ok(m) => (Some(m), None),
+                Ok(m) => (Some(m), None::<()>),
                 Err(_) => (None, None),
             },
             None => (Some(demo_manifest()), None),
