@@ -203,68 +203,49 @@ fn setup_drag_drop(
     refresh: RefreshFn,
 ) {
     use gtk::gdk::DragAction;
+    use gtk::gdk::FileList;
 
-    let drop_target = gtk::DropTarget::new(glib::Type::STRING, DragAction::COPY);
+    let drop_target = gtk::DropTarget::builder()
+        .actions(DragAction::COPY)
+        .build();
+    drop_target.set_types(&[FileList::static_type()]);
     drop_target.connect_drop(move |_dt, value, _x, _y| {
-        let s = match value.get::<Option<String>>() {
-            Ok(Some(s)) => s,
-            _ => return false,
-        };
-        let uri = match s.split_whitespace().next() {
-            Some(u) => u.to_string(),
-            None => return false,
-        };
-        let path = if let Some(p) = uri.strip_prefix("file://") {
-            PathBuf::from(uri_decode(p))
-        } else {
-            PathBuf::from(&uri)
-        };
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            return false;
-        }
-        let manifest = match Manifest::from_path(&path) {
-            Ok(m) => m,
+        let file_list = match value.get::<FileList>() {
+            Ok(fl) => fl,
             Err(_) => return false,
         };
-        let env = Environment::detect();
-        let installer = Installer::default();
-        let install_state = installer.inspect(&manifest, &env).ok();
-        {
-            let mut d = data.borrow_mut();
-            d.manifest = Some(manifest);
-            d.manifest_path = Some(path);
-            d.environment = env;
-            d.installer = installer;
-            d.verification = None;
-            d.install_state = install_state;
-            d.staged_path = None;
-            d.page = Page::Manifest;
-        }
-        if let Some(ref f) = *refresh.borrow() {
-            f();
+        for file in file_list.files() {
+            let path = match file.path() {
+                Some(p) => p,
+                None => continue,
+            };
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            if let Ok(manifest) = Manifest::from_path(&path) {
+                let env = Environment::detect();
+                let installer = Installer::default();
+                let install_state = installer.inspect(&manifest, &env).ok();
+                {
+                    let mut d = data.borrow_mut();
+                    d.manifest = Some(manifest);
+                    d.manifest_path = Some(path);
+                    d.environment = env;
+                    d.installer = installer;
+                    d.verification = None;
+                    d.install_state = install_state;
+                    d.staged_path = None;
+                    d.page = Page::Manifest;
+                }
+                if let Some(ref f) = *refresh.borrow() {
+                    f();
+                }
+                return true;
+            }
         }
         true
     });
     window.add_controller(drop_target);
-}
-
-fn uri_decode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut chars = s.chars();
-    while let Some(c) = chars.next() {
-        if c == '%' {
-            let hex: String = chars.by_ref().take(2).collect();
-            if let Ok(byte) = u8::from_str_radix(&hex, 16) {
-                out.push(byte as char);
-            } else {
-                out.push('%');
-                out.push_str(&hex);
-            }
-        } else {
-            out.push(c);
-        }
-    }
-    out
 }
 
 fn render_manifest(
