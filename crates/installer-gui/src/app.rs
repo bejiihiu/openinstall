@@ -186,8 +186,6 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         glib::ControlFlow::Continue
     });
 
-    glib::ControlFlow::Continue
-
     if let Some(ref f) = *refresh.borrow() {
         f();
     }
