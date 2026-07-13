@@ -359,7 +359,8 @@ fn load_manifest(path: Option<String>, command: &str) -> Result<Manifest, String
 
 fn print_help() {
     println!(
-        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  gui [manifest]                          launch graphical installer (Linux only)\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
+        "installer-cli\n\nCommands:\n  detect\n  validate <manifest.json>\n  select <manifest.json>\n  show <manifest.json>\n  verify <manifest.json>\n  install <manifest.json>\n  remove <manifest.json>\n  update <manifest.json>\n  reinstall <manifest.json>\n  rollback <manifest.json>\n  history <manifest.json>\n  cache clear\n  cache info\n  uri <scheme://app>\n  uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  uri desktop-entry <app_name> <exec_path>\n  uri register <app_name> <exec_path> [scheme]\n  publish --name ... --publisher ... --version ... --description ... [--arch ...] [--ubuntu ...] [--fedora ...] [--opensuse ...] [--output ...]\n  serve <manifest.json> [addr]\n  gui [manifest]                          launch graphical installer (Linux only)
+  gui --register-desktop                  add OpenInstall to application menu\n  signature verify <signature> <file>\n  help\n\n  <scheme://app[?m=manifest_url]>    also accepted as top-level command"
     );
 }
 
@@ -412,8 +413,49 @@ fn serve_command(mut args: impl Iterator<Item = String>) -> Result<(), String> {
 }
 
 #[cfg(all(feature = "gui", target_os = "linux"))]
-fn gui_command(_args: impl Iterator<Item = String>) -> Result<(), String> {
+fn gui_command(args: impl Iterator<Item = String>) -> Result<(), String> {
+    let args: Vec<String> = args.collect();
+    if args.iter().any(|a| a == "--register-desktop") {
+        return register_gui_desktop();
+    }
     crate::gui::app::run();
+    Ok(())
+}
+
+#[cfg(all(feature = "gui", target_os = "linux"))]
+fn register_gui_desktop() -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("failed to get exe path: {e}"))?;
+    let desktop = format!(
+        "[Desktop Entry]\n\
+         Type=Application\n\
+         Name=OpenInstall\n\
+         Comment=Linux Application Installer\n\
+         Exec={} gui %f\n\
+         Icon=system-software-install\n\
+         Terminal=false\n\
+         Categories=Utility;\n\
+         MimeType=x-scheme-handler/openinstall;x-scheme-handler/openinstaller;x-scheme-handler/linuxinstall;\n",
+        exe.display()
+    );
+    let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
+    let apps_dir = PathBuf::from(&home).join(".local/share/applications");
+    std::fs::create_dir_all(&apps_dir).map_err(|e| format!("failed to create {apps_dir:?}: {e}"))?;
+    let desktop_path = apps_dir.join("openinstall.desktop");
+    std::fs::write(&desktop_path, &desktop).map_err(|e| format!("failed to write desktop file: {e}"))?;
+    println!("wrote: {}", desktop_path.display());
+
+    if Command::new("xdg-mime").arg("--version").output().is_ok() {
+        for scheme in &["openinstall", "openinstaller", "linuxinstall"] {
+            let _ = Command::new("xdg-mime")
+                .args(["default", "openinstall.desktop", &format!("x-scheme-handler/{scheme}")])
+                .status();
+        }
+    }
+    if Command::new("update-desktop-database").arg("--version").output().is_ok() {
+        let _ = Command::new("update-desktop-database").arg(&apps_dir).status();
+    }
+    println!("OpenInstall registered in application menu");
+    println!("URI schemes registered: openinstall://, openinstaller://, linuxinstall://");
     Ok(())
 }
 

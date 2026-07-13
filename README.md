@@ -10,6 +10,10 @@ No new package format. No containers. Just a better first impression.
 
 ## Install OpenInstall
 
+<a href="openinstall://openinstall?m=https://raw.githubusercontent.com/bejiihiu/openinstall/main/openinstall.json"><code>⬇ Install OpenInstall</code></a>
+<br>
+<br>
+
 ```bash
 curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh
 ```
@@ -23,8 +27,9 @@ openinstall://openinstall?m=https://raw.githubusercontent.com/bejiihiu/openinsta
 You can also build from source:
 
 ```bash
-cargo build --release -p installer-cli
+cargo build --release -p installer-cli --features gui
 cp target/release/installer ~/.local/bin/
+installer gui --register-desktop   # add to application menu (Linux)
 ```
 
 ## Supported distros
@@ -43,7 +48,7 @@ cp target/release/installer ~/.local/bin/
 - **Linux** (tested on x86_64, aarch64)
 - **A package manager** from the table above (or PackageKit)
 - **curl/wget** (for the bootstrapper)
-- **GTK4 + libadwaita** (only for `installer gui`)
+- **GTK4 + libadwaita** (only for `installer gui` — Linux only, **not available on Windows**)
 
 ## Quick start
 
@@ -122,6 +127,7 @@ installer cache info                                show cache size
 installer publish --name ... (see above)            generate a manifest
 installer serve <manifest> [addr]                   serve /app/latest on HTTP
 installer gui [manifest]                            launch graphical installer (Linux only)
+installer gui --register-desktop                    add to application menu
 
 # URI subcommands
 installer uri <scheme://app>                        parse URI and print details
@@ -161,12 +167,23 @@ If `?m=` or `?manifest=` is present, the installer downloads the manifest and ru
 
 ## GUI
 
+**Linux only** — does not build or run on Windows.
+
 ```bash
 # if you have gtk4 and libadwaita installed
 installer gui ./manifest.json
+# or just drag & drop a .json file onto the window
 ```
 
-Shows the manifest details in a clean Adwaita window. Verify, install, remove, rollback — all clickable. The language follows your system locale (English and Russian right now; more translations welcome).
+Shows the manifest details in a clean Adwaita window. Verify, install, remove, rollback — all clickable. Drag & drop a `.json` manifest onto the window to load it. The language follows your system locale (English and Russian right now; more translations welcome).
+
+Register in the application menu so it shows up in your launcher:
+
+```bash
+installer gui --register-desktop
+```
+
+This also registers the URI schemes (`openinstall://`, `openinstaller://`, `linuxinstall://`) so browser links can open directly in OpenInstall.
 
 ## Bootstrapper
 
