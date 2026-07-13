@@ -202,23 +202,24 @@ fn setup_drag_drop(
     data: Rc<RefCell<UiData>>,
     refresh: RefreshFn,
 ) {
-    let drop_target = gtk::DropTarget::new(
-        Some(&gtk::gdk::ContentFormats::new(&["text/uri-list"])),
-        gtk::DragAction::COPY,
-    );
+    use gtk::gdk::ContentFormats;
+    use gtk::gdk::DragAction;
+
+    let formats = ContentFormats::new(&["text/uri-list"]);
+    let drop_target = gtk::DropTarget::new(Some(&formats), DragAction::COPY);
     drop_target.connect_drop(move |_dt, value, _x, _y| {
-        let s = match value.str().and_then(|s| s.to_str().ok()) {
+        let s = match value.get::<String>() {
             Some(s) => s,
             None => return false,
         };
         let uri = match s.split_whitespace().next() {
-            Some(u) => u,
+            Some(u) => u.to_string(),
             None => return false,
         };
         let path = if let Some(p) = uri.strip_prefix("file://") {
             PathBuf::from(uri_decode(p))
         } else {
-            PathBuf::from(uri)
+            PathBuf::from(&uri)
         };
         if path.extension().and_then(|e| e.to_str()) != Some("json") {
             return false;
@@ -246,7 +247,8 @@ fn setup_drag_drop(
         }
         true
     });
-    window.add_controller(&drop_target);
+    let controller: gtk::EventController = drop_target.upcast();
+    window.add_controller(&controller);
 }
 
 fn uri_decode(s: &str) -> String {
