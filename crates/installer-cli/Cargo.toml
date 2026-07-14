@@ -9,7 +9,7 @@ name = "installer"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["gui"]
 gui = ["installer-gui"]
 
 [dependencies]
