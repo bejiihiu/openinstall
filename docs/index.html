@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenInstall</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:#0d1117;color:#e6edf3;line-height:1.6;padding:2rem 1rem}
+a{color:#58a6ff;text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:800px;margin:0 auto}
+h1{font-size:2.2rem;font-weight:700;margin-bottom:.25rem}
+h1 small{color:#8b949e;font-size:.9rem;font-weight:400;margin-left:.5rem}
+.tagline{color:#8b949e;font-size:1.1rem;margin-bottom:2rem}
+h2{font-size:1.4rem;font-weight:600;margin:2rem 0 .75rem;padding-bottom:.3rem;border-bottom:1px solid #21262d}
+h3{font-size:1.1rem;font-weight:600;margin:1.5rem 0 .5rem}
+pre,code,.box{background:#161b22;border:1px solid #30363d;border-radius:6px}
+code{padding:.15em .35em;font-size:.9em;font-family:'SF Mono','Cascadia Code','JetBrains Mono',monospace}
+pre{padding:1rem;overflow-x:auto;margin:.5rem 0}
+pre code{border:none;padding:0;background:0 0}
+.box{padding:1rem;margin:.5rem 0}
+.kwd{color:#ff7b72}
+.str{color:#a5d6ff}
+.cmt{color:#8b949e}
+.btn{display:inline-block;background:#238636;color:#fff;padding:.6rem 1.2rem;border-radius:6px;font-weight:600;margin:.25rem 0}
+.btn:hover{background:#2ea043;text-decoration:none}
+.btn-small{display:inline-block;background:#21262d;color:#e6edf3;padding:.3rem .6rem;border-radius:6px;font-size:.85rem;border:1px solid #30363d}
+.btn-small:hover{background:#30363d;text-decoration:none}
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin:.75rem 0}
+.docs-grid a{display:block;padding:.75rem 1rem;background:#161b22;border:1px solid #30363d;border-radius:6px;font-weight:500}
+.docs-grid a:hover{background:#1c2128;border-color:#58a6ff;text-decoration:none}
+.cli-ref{font-size:.9rem}
+.cli-ref tr td{padding:.25rem .5rem;border-bottom:1px solid #21262d;vertical-align:top}
+.cli-ref tr td:first-child{white-space:nowrap;color:#a5d6ff;font-family:'SF Mono','Cascadia Code','JetBrains Mono',monospace;font-size:.85rem}
+footer{margin:3rem 0 0;padding-top:1.5rem;border-top:1px solid #21262d;color:#8b949e;font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>OpenInstall <small>v0.1.0</small></h1>
+<p class="tagline">A Linux app installer that works across distros. One CLI, one GUI — apt, dnf, pacman, zypper, all the same way.</p>
+
+<a class="btn" href="https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh">⬇ Install OpenInstall</a>
+
+<h2>Install</h2>
+
+<pre><code><span class="cmt"># Quick install (curl | sh)</span>
+curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh
+
+<span class="cmt"># Or build from source</span>
+cargo build --release -p installer-cli --features gui
+cp target/release/installer ~/.local/bin/
+installer gui --register-desktop</code></pre>
+
+<h2>Quick start</h2>
+
+<pre><code><span class="cmt"># Detect your system</span>
+installer detect
+
+<span class="cmt"># Install from a local manifest</span>
+installer install ./cursor.json
+
+<span class="cmt"># Install directly from a URL</span>
+installer openinstall://cursor?m=https://example.com/cursor.json</code></pre>
+
+<h2>CLI reference</h2>
+
+<table class="cli-ref">
+<tr><td>installer detect</td><td>Print distro, arch, package manager</td></tr>
+<tr><td>installer validate &lt;manifest&gt;</td><td>Check manifest format</td></tr>
+<tr><td>installer select &lt;manifest&gt;</td><td>Show matching package</td></tr>
+<tr><td>installer show &lt;manifest&gt;</td><td>Print app details</td></tr>
+<tr><td>installer verify &lt;manifest&gt;</td><td>Check sha256 + signature</td></tr>
+<tr><td>installer install &lt;manifest&gt;</td><td>Download, verify, install</td></tr>
+<tr><td>installer remove &lt;manifest&gt;</td><td>Uninstall</td></tr>
+<tr><td>installer update &lt;manifest&gt;</td><td>Update (same as install)</td></tr>
+<tr><td>installer reinstall &lt;manifest&gt;</td><td>Force reinstall</td></tr>
+<tr><td>installer rollback &lt;manifest&gt;</td><td>Revert to cached version</td></tr>
+<tr><td>installer history &lt;manifest&gt;</td><td>Installation history</td></tr>
+<tr><td>installer cache clear</td><td>Nuke the cache</td></tr>
+<tr><td>installer cache info</td><td>Show cache size</td></tr>
+<tr><td>installer publish --name ...</td><td>Generate a manifest</td></tr>
+<tr><td>installer serve &lt;manifest&gt; [addr]</td><td>Serve /app/latest on HTTP</td></tr>
+<tr><td>installer gui [manifest]</td><td>Launch graphical installer</td></tr>
+<tr><td>installer self-update</td><td>Download and replace itself</td></tr>
+</table>
+
+<p><a href="https://github.com/bejiihiu/openinstall/blob/main/README.md#cli" class="btn-small">Full CLI reference →</a></p>
+
+<h2>Supported distros</h2>
+
+<table class="cli-ref">
+<tr><td>Arch Linux / Manjaro / EndeavourOS</td><td>pacman</td></tr>
+<tr><td>Ubuntu / Debian / Mint / Pop!_OS</td><td>apt</td></tr>
+<tr><td>Fedora / RHEL / CentOS</td><td>dnf</td></tr>
+<tr><td>openSUSE</td><td>zypper</td></tr>
+<tr><td>Anything with PackageKit</td><td>pkcon</td></tr>
+<tr><td>Anything else</td><td>AppImage / static binary</td></tr>
+</table>
+
+<h2>Docs</h2>
+
+<div class="docs-grid">
+<a href="manifest.html">Manifest format</a>
+<a href="publishing.html">Publishing an app</a>
+<a href="architecture.html">Architecture</a>
+</div>
+
+<h2>How it works</h2>
+
+<p>OpenInstall detects your distro, downloads the right package, verifies it, then hands it to your system package manager. Three crates, one dependency chain:</p>
+
+<pre><code>installer-core          types, adapters, verification, runtime
+installer-cli           CLI (20+ commands) + optional GUI
+installer-bootstrapper  Tiny entry point for download + launch</code></pre>
+
+<p>See <a href="architecture.html">architecture docs</a> for details.</p>
+
+<h2>License</h2>
+<p><a href="https://github.com/bejiihiu/openinstall/blob/main/LICENSE">MIT</a></p>
+
+<footer>
+<p><a href="https://github.com/bejiihiu/openinstall">GitHub</a> &middot; <a href="https://github.com/bejiihiu/openinstall/blob/main/HONESTY.md">About</a></p>
+</footer>
+
+</div>
+</body>
+</html>
