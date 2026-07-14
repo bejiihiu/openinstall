@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::environment::{Environment, PackageManager, package_manager_for_slot, preferred_slot};
+use crate::environment::{package_manager_for_slot, preferred_slot, Environment, PackageManager};
 use crate::matrix::{PackageMatrix, PackageSlot};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

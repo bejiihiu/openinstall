@@ -428,7 +428,8 @@ fn publish_command(args: impl Iterator<Item = String>) -> Result<(), String> {
             fedora: optional_flag(&mut args, "--fedora"),
             opensuse: optional_flag(&mut args, "--opensuse"),
             flatpak: optional_flag(&mut args, "--flatpak"),
-            appimage: optional_flag(&mut args, "--appimage").or(optional_flag(&mut args, "--fallback")),
+            appimage: optional_flag(&mut args, "--appimage")
+                .or(optional_flag(&mut args, "--fallback")),
             windows: optional_flag(&mut args, "--windows"),
             macos: optional_flag(&mut args, "--macos"),
         },

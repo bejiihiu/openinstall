@@ -61,8 +61,7 @@ impl<'de> Deserialize<'de> for PackageMatrix {
 
                 while let Some(key) = map.next_key::<Field>()? {
                     let value = map.next_value::<serde_json::Value>()?;
-                    let parsed = deserialize_package_ref_value(value)
-                        .map_err(de::Error::custom)?;
+                    let parsed = deserialize_package_ref_value(value).map_err(de::Error::custom)?;
                     match key {
                         Field::Arch => {
                             if arch.is_some() {
@@ -204,7 +203,11 @@ fn deserialize_package_ref_value(value: serde_json::Value) -> Result<Option<Stri
         serde_json::Value::Null => Ok(None),
         serde_json::Value::String(s) => {
             let s = s.trim().to_string();
-            if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
+            if s.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(s))
+            }
         }
         serde_json::Value::Object(map) => {
             if map.is_empty() {
@@ -220,7 +223,9 @@ fn deserialize_package_ref_value(value: serde_json::Value) -> Result<Option<Stri
             }
             Err("package objects must contain a string field named url, href, uri, download, path, or file".to_string())
         }
-        other => Err(format!("expected a string or object for package reference, got {other}")),
+        other => Err(format!(
+            "expected a string or object for package reference, got {other}"
+        )),
     }
 }
 

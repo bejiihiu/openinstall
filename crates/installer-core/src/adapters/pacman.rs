@@ -1,5 +1,5 @@
-use crate::PackageManager;
 use super::PackageAdapter;
+use crate::PackageManager;
 
 pub struct PacmanAdapter;
 

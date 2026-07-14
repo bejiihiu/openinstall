@@ -34,7 +34,10 @@ impl fmt::Display for PackageManager {
 
 impl PackageManager {
     pub fn is_system_package_manager(self) -> bool {
-        !matches!(self, PackageManager::Flatpak | PackageManager::PackageKit | PackageManager::Unknown)
+        !matches!(
+            self,
+            PackageManager::Flatpak | PackageManager::PackageKit | PackageManager::Unknown
+        )
     }
 
     pub fn install_command(self) -> Option<&'static str> {

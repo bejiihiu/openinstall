@@ -3,7 +3,8 @@ pub const REPO_OWNER: &str = "bejiihiu";
 pub const REPO_NAME: &str = "openinstall";
 pub const REPO_URL: &str = "https://github.com/bejiihiu/openinstall";
 pub const GITHUB_API_URL: &str = "https://api.github.com/repos/bejiihiu/openinstall/releases";
-pub const GITHUB_DOWNLOAD_URL: &str = "https://github.com/bejiihiu/openinstall/releases/latest/download";
+pub const GITHUB_DOWNLOAD_URL: &str =
+    "https://github.com/bejiihiu/openinstall/releases/latest/download";
 
 // Binary/app names
 pub const APP_NAME: &str = "OpenInstall";
@@ -70,8 +71,10 @@ pub const TARGET_AARCH64_LINUX: &str = "aarch64-unknown-linux-gnu";
 // GitHub API constants
 pub const GITHUB_HOST: &str = "github.com";
 pub const GITHUB_API_ACCEPT_HEADER: &str = "application/vnd.github+json";
-pub const GITHUB_RELEASES_API_FORMAT: &str = "https://api.github.com/repos/{owner}/{repo}/releases/latest";
-pub const GITHUB_DOWNLOAD_URL_FORMAT: &str = "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-{target}";
+pub const GITHUB_RELEASES_API_FORMAT: &str =
+    "https://api.github.com/repos/{owner}/{repo}/releases/latest";
+pub const GITHUB_DOWNLOAD_URL_FORMAT: &str =
+    "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-{target}";
 
 // SHA-256 constants
 pub const SHA256_PREFIX: &str = "sha256:";
@@ -138,7 +141,8 @@ pub const HTTP_VERSION: &str = "HTTP/1.1";
 pub const API_LATEST_PATH: &str = "/app/latest";
 pub const API_RESPONSE_OK: &str = "HTTP/1.1 200 OK\r\n";
 pub const API_RESPONSE_NOT_FOUND: &str = "HTTP/1.1 404 Not Found\r\n";
-pub const API_RESPONSE_BAD_REQUEST: &str = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+pub const API_RESPONSE_BAD_REQUEST: &str =
+    "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 pub const API_JSON_NOT_FOUND: &[u8] = b"{\"error\":\"not found\"}";
 pub const API_REQUEST_BUFFER_SIZE: usize = 1024;
 
@@ -200,4 +204,5 @@ pub const LOCALE_RU_PREFIX: &str = "ru";
 pub const ALERT_NO_HISTORY: &str = "No history";
 pub const HISTORY_ENTRY_GUI_FORMAT: &str = "{} v{} via {} — {}";
 pub const CACHE_INFO_FORMAT: &str = "{} files, {} bytes";
-pub const REGISTERED_SCHEMES_MSG: &str = "URI schemes registered: openinstall://, openinstaller://, linuxinstall://";
+pub const REGISTERED_SCHEMES_MSG: &str =
+    "URI schemes registered: openinstall://, openinstaller://, linuxinstall://";

@@ -1,5 +1,5 @@
-use crate::PackageManager;
 use super::PackageAdapter;
+use crate::PackageManager;
 
 pub struct FlatpakAdapter;
 
@@ -42,11 +42,7 @@ impl PackageAdapter for FlatpakAdapter {
     fn query_version_command(&self, package_id: &str) -> (String, Vec<String>) {
         (
             "flatpak".to_string(),
-            vec![
-                "info".into(),
-                "--show-ref".into(),
-                package_id.to_string(),
-            ],
+            vec!["info".into(), "--show-ref".into(), package_id.to_string()],
         )
     }
 

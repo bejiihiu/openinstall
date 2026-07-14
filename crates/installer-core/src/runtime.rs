@@ -213,9 +213,7 @@ impl Installer {
 
         self.run_scripts(&manifest.scripts, "preinstall")?;
 
-        if package.slot == PackageSlot::Flatpak
-            && package.reference.starts_with("flatpak://")
-        {
+        if package.slot == PackageSlot::Flatpak && package.reference.starts_with("flatpak://") {
             let app_id = package.reference.strip_prefix("flatpak://").unwrap();
             let Some(adapter) = adapter_for(PackageManager::Flatpak) else {
                 return Err(InstallerError::UnsupportedManager(PackageManager::Flatpak));
@@ -288,9 +286,7 @@ impl Installer {
 
         self.run_scripts(&manifest.scripts, "preinstall")?;
 
-        if package.slot == PackageSlot::Flatpak
-            && package.reference.starts_with("flatpak://")
-        {
+        if package.slot == PackageSlot::Flatpak && package.reference.starts_with("flatpak://") {
             let app_id = package.reference.strip_prefix("flatpak://").unwrap();
             let _ = tx.send(InstallProgress {
                 downloaded_bytes: 0,
@@ -466,9 +462,7 @@ impl Installer {
             });
         }
 
-        if package.slot == PackageSlot::Flatpak
-            && package.reference.starts_with("flatpak://")
-        {
+        if package.slot == PackageSlot::Flatpak && package.reference.starts_with("flatpak://") {
             let app_id = package.reference.strip_prefix("flatpak://").unwrap();
             let Some(adapter) = adapter_for(PackageManager::Flatpak) else {
                 return Err(InstallerError::UnsupportedManager(PackageManager::Flatpak));
@@ -712,7 +706,9 @@ impl Installer {
         scripts: &Option<crate::Scripts>,
         phase: &str,
     ) -> Result<(), InstallerError> {
-        let Some(scripts) = scripts else { return Ok(()) };
+        let Some(scripts) = scripts else {
+            return Ok(());
+        };
         let cmd = match phase {
             "preinstall" => &scripts.preinstall,
             "postinstall" => &scripts.postinstall,
@@ -1244,7 +1240,10 @@ fn create_desktop_entry(
     _bin_name: &str,
 ) -> Result<PathBuf, InstallerError> {
     let apps_dir = if let Some(home) = std::env::var_os("HOME") {
-        PathBuf::from(home).join(".local").join("share").join("applications")
+        PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("applications")
     } else {
         return Err(InstallerError::Io {
             path: PathBuf::from("~/.local/share/applications"),
@@ -1288,7 +1287,10 @@ fn create_desktop_entry(
 
 fn remove_desktop_entry(manifest: &Manifest) {
     let apps_dir = match std::env::var_os("HOME") {
-        Some(home) => PathBuf::from(home).join(".local").join("share").join("applications"),
+        Some(home) => PathBuf::from(home)
+            .join(".local")
+            .join("share")
+            .join("applications"),
         None => return,
     };
     let desktop_path = apps_dir.join(format!("{}.desktop", slugify(&manifest.name)));

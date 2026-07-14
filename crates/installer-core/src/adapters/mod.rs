@@ -1,9 +1,9 @@
 pub mod apt;
 pub mod dnf;
-pub mod pacman;
-pub mod zypper;
 pub mod flatpak;
 pub mod packagekit;
+pub mod pacman;
+pub mod zypper;
 
 use crate::PackageManager;
 
@@ -18,10 +18,10 @@ pub trait PackageAdapter: Send + Sync {
 
 use apt::AptAdapter;
 use dnf::DnfAdapter;
-use pacman::PacmanAdapter;
-use zypper::ZypperAdapter;
 use flatpak::FlatpakAdapter;
 use packagekit::PackageKitAdapter;
+use pacman::PacmanAdapter;
+use zypper::ZypperAdapter;
 
 static APT: AptAdapter = AptAdapter;
 static DNF: DnfAdapter = DnfAdapter;
