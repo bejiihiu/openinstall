@@ -63,10 +63,12 @@ pub fn run(args: Vec<String>) {
         .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
+    let args_activate = args.clone();
+    let args_open = args;
     application.connect_activate(move |app| {
-        eprintln!("[gui] connect_activate called, args={:?}", args);
+        eprintln!("[gui] connect_activate called");
         let locale = Locale::detect();
-        let manifest_path = args.first().map(PathBuf::from);
+        let manifest_path = args_activate.first().map(PathBuf::from);
         let environment = Environment::detect();
         let installer = Installer::default();
 
@@ -105,7 +107,7 @@ pub fn run(args: Vec<String>) {
         let environment = Environment::detect();
         let installer = Installer::default();
 
-        let manifest_path = args.first().map(PathBuf::from);
+        let manifest_path = args_open.first().map(PathBuf::from);
         let (manifest, _load_error): (Option<Manifest>, Option<String>) = match manifest_path.as_ref() {
             Some(path) => match Manifest::from_path(path) {
                 Ok(m) => (Some(m), None),
