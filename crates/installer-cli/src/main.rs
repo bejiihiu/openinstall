@@ -393,6 +393,25 @@ fn print_help() {
 }
 
 fn publish_command(mut args: impl Iterator<Item = String>) -> Result<(), String> {
+    let preinstall = optional_flag(&mut args, "--preinstall");
+    let postinstall = optional_flag(&mut args, "--postinstall");
+    let preremove = optional_flag(&mut args, "--preremove");
+    let postremove = optional_flag(&mut args, "--postremove");
+    let scripts = if preinstall.is_some()
+        || postinstall.is_some()
+        || preremove.is_some()
+        || postremove.is_some()
+    {
+        Some(installer_core::Scripts {
+            preinstall,
+            postinstall,
+            preremove,
+            postremove,
+        })
+    } else {
+        None
+    };
+
     let spec = PublishSpec {
         name: required_flag(&mut args, "--name")?,
         publisher: required_flag(&mut args, "--publisher")?,
@@ -407,10 +426,14 @@ fn publish_command(mut args: impl Iterator<Item = String>) -> Result<(), String>
             ubuntu: optional_flag(&mut args, "--ubuntu"),
             fedora: optional_flag(&mut args, "--fedora"),
             opensuse: optional_flag(&mut args, "--opensuse"),
-            fallback: optional_flag(&mut args, "--fallback"),
+            flatpak: optional_flag(&mut args, "--flatpak"),
+            appimage: optional_flag(&mut args, "--appimage").or(optional_flag(&mut args, "--fallback")),
+            windows: optional_flag(&mut args, "--windows"),
+            macos: optional_flag(&mut args, "--macos"),
         },
         sha256: optional_flag(&mut args, "--sha256"),
         signature: optional_flag(&mut args, "--signature"),
+        scripts,
     };
 
     let output = optional_flag(&mut args, "--output").unwrap_or_else(|| "-".to_string());
@@ -503,10 +526,11 @@ fn self_update_command() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| format!("failed to get exe path: {e}"))?;
 
     let arch = std::env::consts::ARCH;
-    let target = match arch {
-        "x86_64" => "x86_64-unknown-linux-gnu",
-        "aarch64" => "aarch64-unknown-linux-gnu",
-        other => return Err(format!("unsupported architecture: {other}")),
+    let os = std::env::consts::OS;
+    let target = match (os, arch) {
+        ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+        ("linux", "aarch64") => "aarch64-unknown-linux-gnu",
+        _ => return Err("unsupported platform for self-update".to_string()),
     };
     let url = format!(
         "https://github.com/bejiihiu/openinstall/releases/latest/download/installer-{target}"

@@ -848,9 +848,13 @@ fn demo_manifest() -> Manifest {
             ubuntu: Some("https://example.com/demo.deb".to_string()),
             fedora: Some("https://example.com/demo.rpm".to_string()),
             opensuse: Some("https://example.com/demo.rpm".to_string()),
-            fallback: Some("https://example.com/demo.AppImage".to_string()),
+            flatpak: None,
+            appimage: Some("https://example.com/demo.AppImage".to_string()),
+            windows: None,
+            macos: None,
         },
         sha256: None,
         signature: None,
+        scripts: None,
     }
 }

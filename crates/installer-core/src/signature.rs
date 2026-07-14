@@ -66,7 +66,6 @@ impl SignatureSpec {
             path: path.to_path_buf(),
             source,
         })?;
-        #[allow(deprecated)]
         let verifier = UnparsedPublicKey::new(&signature::ED25519, &public_key);
         verifier
             .verify(&bytes, &signature)

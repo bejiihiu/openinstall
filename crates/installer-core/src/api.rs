@@ -123,6 +123,7 @@ mod tests {
             packages: PackageMatrix::default(),
             sha256: None,
             signature: None,
+            scripts: None,
         };
         let resp = LatestAppResponse::from(&manifest);
         assert_eq!(resp.version, "2.0");

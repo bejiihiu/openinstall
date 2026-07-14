@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
-use std::sync::mpsc;
+use std::sync::{mpsc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use hex::ToHex;
@@ -13,7 +13,7 @@ use thiserror::Error;
 
 use crate::{
     adapter_for, resolve_latest_release_asset, Environment, Manifest, ManifestError,
-    PackageManager, ResolvedPackage, SignatureSpec,
+    PackageManager, PackageSlot, ResolvedPackage, SignatureSpec,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -210,15 +210,47 @@ impl Installer {
             .package_for_environment(environment)
             .ok_or(InstallerError::NoPackage)?;
         let package_id = package_id_for_manifest(manifest);
+
+        self.run_scripts(&manifest.scripts, "preinstall")?;
+
+        if package.slot == PackageSlot::Flatpak
+            && package.reference.starts_with("flatpak://")
+        {
+            let app_id = package.reference.strip_prefix("flatpak://").unwrap();
+            let Some(adapter) = adapter_for(PackageManager::Flatpak) else {
+                return Err(InstallerError::UnsupportedManager(PackageManager::Flatpak));
+            };
+            let (cmd, args) = adapter.install_command(app_id);
+            self.run_command(&cmd, &args)?;
+            let command = format!("{cmd} {}", args.join(" "));
+            self.append_history(&HistoryEntry {
+                package_id: package_id.clone(),
+                package_manager: package.package_manager,
+                version: manifest.version.clone(),
+                staged_path: String::new(),
+                reference: package.reference.to_string(),
+                sha256: None,
+                installed_at_unix_secs: current_unix_secs(),
+            })?;
+            self.run_scripts(&manifest.scripts, "postinstall")?;
+            return Ok(InstallOutcome {
+                package_id,
+                package_manager: package.package_manager,
+                staged_path: PathBuf::new(),
+                command,
+            });
+        }
+
         let staged_path = self.stage_package(manifest, &package, None)?;
         self.verify_sha256_if_present(manifest, &staged_path)?;
         self.verify_signature_if_present(manifest, &staged_path)?;
 
-        let command = if package.slot == crate::PackageSlot::Fallback {
-            format!("staged: {}", staged_path.display())
+        let command = if package.slot == PackageSlot::AppImage {
+            self.install_appimage(&staged_path, manifest)?
         } else {
             self.install_with_package_manager(package.package_manager, &staged_path, &package_id)?
         };
+
         self.append_history(&HistoryEntry {
             package_id: package_id.clone(),
             package_manager: package.package_manager,
@@ -231,6 +263,8 @@ impl Installer {
                 .map(|value| normalize_sha256(value)),
             installed_at_unix_secs: current_unix_secs(),
         })?;
+
+        self.run_scripts(&manifest.scripts, "postinstall")?;
 
         Ok(InstallOutcome {
             package_id,
@@ -251,6 +285,50 @@ impl Installer {
             .package_for_environment(environment)
             .ok_or(InstallerError::NoPackage)?;
         let package_id = package_id_for_manifest(manifest);
+
+        self.run_scripts(&manifest.scripts, "preinstall")?;
+
+        if package.slot == PackageSlot::Flatpak
+            && package.reference.starts_with("flatpak://")
+        {
+            let app_id = package.reference.strip_prefix("flatpak://").unwrap();
+            let _ = tx.send(InstallProgress {
+                downloaded_bytes: 0,
+                total_bytes: 0,
+                speed_bytes_per_sec: 0.0,
+                log_line: Some(format!("Installing flatpak: {app_id}")),
+                stage: InstallStage::Installing,
+            });
+            let Some(adapter) = adapter_for(PackageManager::Flatpak) else {
+                return Err(InstallerError::UnsupportedManager(PackageManager::Flatpak));
+            };
+            let (cmd, args) = adapter.install_command(app_id);
+            self.run_command(&cmd, &args)?;
+            let command = format!("{cmd} {}", args.join(" "));
+            self.run_scripts(&manifest.scripts, "postinstall")?;
+            let _ = tx.send(InstallProgress {
+                downloaded_bytes: 0,
+                total_bytes: 0,
+                speed_bytes_per_sec: 0.0,
+                log_line: Some("Done.".to_string()),
+                stage: InstallStage::Done,
+            });
+            self.append_history(&HistoryEntry {
+                package_id: package_id.clone(),
+                package_manager: package.package_manager,
+                version: manifest.version.clone(),
+                staged_path: String::new(),
+                reference: package.reference.to_string(),
+                sha256: None,
+                installed_at_unix_secs: current_unix_secs(),
+            })?;
+            return Ok(InstallOutcome {
+                package_id,
+                package_manager: package.package_manager,
+                staged_path: PathBuf::new(),
+                command,
+            });
+        }
 
         let _ = tx.send(InstallProgress {
             downloaded_bytes: 0,
@@ -273,23 +351,58 @@ impl Installer {
         self.verify_sha256_if_present(manifest, &staged_path)?;
         self.verify_signature_if_present(manifest, &staged_path)?;
 
-        let command = if package.slot == crate::PackageSlot::Fallback {
-            format!("staged: {}", staged_path.display())
-        } else {
+        if package.slot == PackageSlot::AppImage {
             let _ = tx.send(InstallProgress {
                 downloaded_bytes: 0,
                 total_bytes: 0,
                 speed_bytes_per_sec: 0.0,
-                log_line: Some("Installing package...".to_string()),
+                log_line: Some("Installing AppImage...".to_string()),
                 stage: InstallStage::Installing,
             });
-            let Some(adapter) = adapter_for(package.package_manager) else {
-                return Err(InstallerError::UnsupportedManager(package.package_manager));
-            };
-            let (cmd, args) = adapter.install_command(&staged_path.display().to_string());
-            self.run_command_streaming(&cmd, &args, &tx)?;
-            format!("{cmd} {}", args.join(" "))
+            let command = self.install_appimage(&staged_path, manifest)?;
+            self.run_scripts(&manifest.scripts, "postinstall")?;
+            let _ = tx.send(InstallProgress {
+                downloaded_bytes: 0,
+                total_bytes: 0,
+                speed_bytes_per_sec: 0.0,
+                log_line: Some("Done.".to_string()),
+                stage: InstallStage::Done,
+            });
+            self.append_history(&HistoryEntry {
+                package_id: package_id.clone(),
+                package_manager: package.package_manager,
+                version: manifest.version.clone(),
+                staged_path: staged_path.display().to_string(),
+                reference: package.reference.to_string(),
+                sha256: manifest
+                    .sha256
+                    .as_ref()
+                    .map(|value| normalize_sha256(value)),
+                installed_at_unix_secs: current_unix_secs(),
+            })?;
+            return Ok(InstallOutcome {
+                package_id,
+                package_manager: package.package_manager,
+                staged_path,
+                command,
+            });
+        }
+
+        let _ = tx.send(InstallProgress {
+            downloaded_bytes: 0,
+            total_bytes: 0,
+            speed_bytes_per_sec: 0.0,
+            log_line: Some("Installing package...".to_string()),
+            stage: InstallStage::Installing,
+        });
+        let Some(adapter) = adapter_for(package.package_manager) else {
+            return Err(InstallerError::UnsupportedManager(package.package_manager));
         };
+        let (cmd, args) = adapter.install_command(&staged_path.display().to_string());
+        self.run_command_streaming(&cmd, &args, &tx)?;
+        let command = format!("{cmd} {}", args.join(" "));
+
+        self.run_scripts(&manifest.scripts, "postinstall")?;
 
         let _ = tx.send(InstallProgress {
             downloaded_bytes: 0,
@@ -338,7 +451,23 @@ impl Installer {
             .package_for_environment(environment)
             .ok_or(InstallerError::NoPackage)?;
         let package_id = package_id_for_manifest(manifest);
+
+        self.run_scripts(&manifest.scripts, "preremove")?;
+
+        if package.slot == PackageSlot::AppImage {
+            let removed = remove_appimage_binaries(manifest);
+            remove_desktop_entry(manifest);
+            self.run_scripts(&manifest.scripts, "postremove")?;
+            return Ok(InstallOutcome {
+                package_id,
+                package_manager: package.package_manager,
+                staged_path: PathBuf::new(),
+                command: format!("removed appimage for {}", removed),
+            });
+        }
+
         let command = self.remove_with_package_manager(package.package_manager, &package_id)?;
+        self.run_scripts(&manifest.scripts, "postremove")?;
 
         Ok(InstallOutcome {
             package_id,
@@ -526,6 +655,88 @@ impl Installer {
         let (command, args) = adapter.install_command(&staged_path.display().to_string());
         self.run_command(&command, &args)?;
         Ok(format!("{command} {}", args.join(" ")))
+    }
+
+    fn install_appimage(
+        &self,
+        staged_path: &Path,
+        manifest: &Manifest,
+    ) -> Result<String, InstallerError> {
+        let bin_name = staged_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| slugify(&manifest.name));
+
+        let bin_dir = local_bin_dir();
+        fs::create_dir_all(&bin_dir).map_err(|source| InstallerError::Io {
+            path: bin_dir.clone(),
+            source,
+        })?;
+
+        let target_path = bin_dir.join(&bin_name);
+        fs::copy(staged_path, &target_path).map_err(|source| InstallerError::Io {
+            path: target_path.clone(),
+            source,
+        })?;
+        set_executable(&target_path)?;
+
+        let desktop_path = create_desktop_entry(manifest, &target_path, &bin_name)?;
+        Ok(format!(
+            "installed to: {}; desktop: {}",
+            target_path.display(),
+            desktop_path.display()
+        ))
+    }
+
+    fn run_scripts(
+        &self,
+        scripts: &Option<crate::Scripts>,
+        phase: &str,
+    ) -> Result<(), InstallerError> {
+        let Some(scripts) = scripts else { return Ok(()) };
+        let cmd = match phase {
+            "preinstall" => &scripts.preinstall,
+            "postinstall" => &scripts.postinstall,
+            "preremove" => &scripts.preremove,
+            "postremove" => &scripts.postremove,
+            _ => return Ok(()),
+        };
+        let Some(cmd) = cmd else { return Ok(()) };
+        if cmd.trim().is_empty() {
+            return Ok(());
+        }
+
+        if cfg!(target_os = "windows") {
+            let status = Command::new("cmd")
+                .args(["/C", cmd])
+                .status()
+                .map_err(|source| InstallerError::Command {
+                    command: cmd.to_string(),
+                    source,
+                })?;
+            if !status.success() {
+                return Err(InstallerError::CommandStatus {
+                    command: cmd.to_string(),
+                    status: status.code().unwrap_or(-1),
+                });
+            }
+        } else {
+            let status = Command::new("sh")
+                .args(["-c", cmd])
+                .status()
+                .map_err(|source| InstallerError::Command {
+                    command: cmd.to_string(),
+                    source,
+                })?;
+            if !status.success() {
+                return Err(InstallerError::CommandStatus {
+                    command: cmd.to_string(),
+                    status: status.code().unwrap_or(-1),
+                });
+            }
+        }
+
+        Ok(())
     }
 
     fn remove_with_package_manager(
@@ -792,7 +1003,8 @@ impl Installer {
     }
 
     fn append_history(&self, entry: &HistoryEntry) -> Result<(), InstallerError> {
-        let mut history = self.read_history()?;
+        let _lock = HISTORY_LOCK.lock().unwrap();
+        let mut history = self.read_history_inner()?;
         history.push(entry.clone());
         let json = serde_json::to_vec_pretty(&history)
             .map_err(|error| InstallerError::History(error.to_string()))?;
@@ -822,6 +1034,15 @@ impl Installer {
     }
 
     fn read_history(&self) -> Result<Vec<HistoryEntry>, InstallerError> {
+        let _lock = HISTORY_LOCK.lock().unwrap();
+        self.read_history_inner()
+    }
+
+    fn read_history_inner(&self) -> Result<Vec<HistoryEntry>, InstallerError> {
+        let tmp_path = self.history_path.with_extension("json.tmp");
+        if tmp_path.exists() {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
         let Ok(contents) = fs::read_to_string(&self.history_path) else {
             return Ok(Vec::new());
         };
@@ -836,6 +1057,8 @@ enum QueryKind {
     Version,
     Dependencies,
 }
+
+static HISTORY_LOCK: Mutex<()> = Mutex::new(());
 
 fn package_id_for_manifest(manifest: &Manifest) -> String {
     slugify(&manifest.name)
@@ -858,11 +1081,12 @@ fn package_file_name(manifest: &Manifest, reference: &str) -> String {
 
 fn asset_suffix_for_package(package: &ResolvedPackage<'_>) -> &'static str {
     match package.slot {
-        crate::PackageSlot::Arch => ".pkg.tar.zst",
-        crate::PackageSlot::Ubuntu => ".deb",
-        crate::PackageSlot::Fedora => ".rpm",
-        crate::PackageSlot::OpenSuse => ".rpm",
-        crate::PackageSlot::Fallback => ".AppImage",
+        PackageSlot::Arch => ".pkg.tar.zst",
+        PackageSlot::Ubuntu => ".deb",
+        PackageSlot::Fedora => ".rpm",
+        PackageSlot::OpenSuse => ".rpm",
+        PackageSlot::Flatpak => ".flatpak",
+        PackageSlot::AppImage => ".AppImage",
     }
 }
 
@@ -962,6 +1186,113 @@ fn default_cache_dir() -> PathBuf {
     std::env::temp_dir().join("openinstall")
 }
 
+fn local_bin_dir() -> PathBuf {
+    if let Some(home) = std::env::var_os("HOME") {
+        return PathBuf::from(home).join(".local").join("bin");
+    }
+    if let Some(localappdata) = std::env::var_os("LOCALAPPDATA") {
+        return PathBuf::from(localappdata).join("openinstall").join("bin");
+    }
+    PathBuf::from("/usr/local/bin")
+}
+
+fn set_executable(path: &Path) -> Result<(), InstallerError> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = fs::metadata(path).map_err(|source| InstallerError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        let mut perms = metadata.permissions();
+        let mode = perms.mode();
+        perms.set_mode(mode | 0o111);
+        fs::set_permissions(path, perms).map_err(|source| InstallerError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+    Ok(())
+}
+
+fn create_desktop_entry(
+    manifest: &Manifest,
+    bin_path: &Path,
+    _bin_name: &str,
+) -> Result<PathBuf, InstallerError> {
+    let apps_dir = if let Some(home) = std::env::var_os("HOME") {
+        PathBuf::from(home).join(".local").join("share").join("applications")
+    } else {
+        return Err(InstallerError::Io {
+            path: PathBuf::from("~/.local/share/applications"),
+            source: std::io::Error::new(std::io::ErrorKind::NotFound, "HOME not set"),
+        });
+    };
+
+    fs::create_dir_all(&apps_dir).map_err(|source| InstallerError::Io {
+        path: apps_dir.clone(),
+        source,
+    })?;
+
+    let desktop_path = apps_dir.join(format!("{}.desktop", slugify(&manifest.name)));
+    let exec_path = bin_path.display().to_string();
+    let icon = manifest.image.as_deref().unwrap_or("");
+
+    let content = format!(
+        "[Desktop Entry]\n\
+         Type=Application\n\
+         Name={name}\n\
+         Comment={desc}\n\
+         Exec={exec} %F\n\
+         Icon={icon}\n\
+         Terminal=false\n\
+         Categories=Utility;\n\
+         X-OpenInstall-Manifest={manifest_ref}\n",
+        name = manifest.name,
+        desc = manifest.description,
+        exec = exec_path,
+        icon = icon,
+        manifest_ref = manifest.name,
+    );
+
+    fs::write(&desktop_path, &content).map_err(|source| InstallerError::Io {
+        path: desktop_path.clone(),
+        source,
+    })?;
+
+    Ok(desktop_path)
+}
+
+fn remove_desktop_entry(manifest: &Manifest) {
+    let apps_dir = match std::env::var_os("HOME") {
+        Some(home) => PathBuf::from(home).join(".local").join("share").join("applications"),
+        None => return,
+    };
+    let desktop_path = apps_dir.join(format!("{}.desktop", slugify(&manifest.name)));
+    let _ = fs::remove_file(desktop_path);
+}
+
+fn remove_appimage_binaries(manifest: &Manifest) -> String {
+    let bin_dir = local_bin_dir();
+    let slug = slugify(&manifest.name);
+    if let Ok(entries) = fs::read_dir(&bin_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.contains(&slug) || name_str.eq_ignore_ascii_case(&manifest.name) {
+                let path = entry.path();
+                let _ = fs::remove_file(&path);
+                return path.display().to_string();
+            }
+        }
+    }
+    slug
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1014,6 +1345,7 @@ mod tests {
                 packages: crate::PackageMatrix::default(),
                 sha256: None,
                 signature: None,
+                scripts: None,
             }),
             "cursor-pro"
         );
@@ -1066,6 +1398,7 @@ mod tests {
             packages: crate::PackageMatrix::default(),
             sha256: None,
             signature: None,
+            scripts: None,
         };
         let name = package_file_name(&manifest, "https://example.com/app.deb");
         assert_eq!(name, "app.deb");
@@ -1085,6 +1418,7 @@ mod tests {
             packages: crate::PackageMatrix::default(),
             sha256: None,
             signature: None,
+            scripts: None,
         };
         let name = package_file_name(&manifest, "my-app");
         assert_eq!(name, "my-app-2.0.pkg");
@@ -1111,7 +1445,7 @@ mod tests {
     #[test]
     fn asset_suffix_for_arch() {
         let pkg = ResolvedPackage {
-            slot: crate::PackageSlot::Arch,
+            slot: PackageSlot::Arch,
             package_manager: PackageManager::Pacman,
             reference: "https://example.com/pkg",
         };
@@ -1121,7 +1455,7 @@ mod tests {
     #[test]
     fn asset_suffix_for_ubuntu() {
         let pkg = ResolvedPackage {
-            slot: crate::PackageSlot::Ubuntu,
+            slot: PackageSlot::Ubuntu,
             package_manager: PackageManager::Apt,
             reference: "https://example.com/pkg",
         };
@@ -1131,12 +1465,12 @@ mod tests {
     #[test]
     fn asset_suffix_for_fedora_and_opensuse() {
         let fed = ResolvedPackage {
-            slot: crate::PackageSlot::Fedora,
+            slot: PackageSlot::Fedora,
             package_manager: PackageManager::Dnf,
             reference: "",
         };
         let suse = ResolvedPackage {
-            slot: crate::PackageSlot::OpenSuse,
+            slot: PackageSlot::OpenSuse,
             package_manager: PackageManager::Zypper,
             reference: "",
         };
@@ -1145,10 +1479,20 @@ mod tests {
     }
 
     #[test]
-    fn asset_suffix_for_fallback() {
+    fn asset_suffix_for_flatpak() {
         let pkg = ResolvedPackage {
-            slot: crate::PackageSlot::Fallback,
-            package_manager: PackageManager::PackageKit,
+            slot: PackageSlot::Flatpak,
+            package_manager: PackageManager::Flatpak,
+            reference: "",
+        };
+        assert_eq!(asset_suffix_for_package(&pkg), ".flatpak");
+    }
+
+    #[test]
+    fn asset_suffix_for_appimage() {
+        let pkg = ResolvedPackage {
+            slot: PackageSlot::AppImage,
+            package_manager: PackageManager::Unknown,
             reference: "",
         };
         assert_eq!(asset_suffix_for_package(&pkg), ".AppImage");

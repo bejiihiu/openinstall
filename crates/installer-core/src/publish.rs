@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{Manifest, ManifestError, PackageMatrix};
+use crate::{Manifest, ManifestError, PackageMatrix, Scripts};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PublishSpec {
@@ -19,6 +19,8 @@ pub struct PublishSpec {
     pub packages: PackageMatrix,
     pub sha256: Option<String>,
     pub signature: Option<String>,
+    #[serde(default)]
+    pub scripts: Option<Scripts>,
 }
 
 #[derive(Debug, Error)]
@@ -68,6 +70,7 @@ impl PublishSpec {
             packages: self.packages.clone(),
             sha256: self.sha256.clone(),
             signature: self.signature.clone(),
+            scripts: self.scripts.clone(),
         }
     }
 
@@ -101,10 +104,14 @@ mod tests {
                 ubuntu: None,
                 fedora: None,
                 opensuse: None,
-                fallback: None,
+                flatpak: None,
+                appimage: None,
+                windows: None,
+                macos: None,
             },
             sha256: None,
             signature: None,
+            scripts: None,
         }
     }
 
