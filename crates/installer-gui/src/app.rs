@@ -60,13 +60,13 @@ pub fn run(args: Vec<String>) {
     eprintln!("[gui] run: args={:?}", args);
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
+        .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
     application.connect_activate(move |app| {
         eprintln!("[gui] connect_activate called, args={:?}", args);
         let locale = Locale::detect();
         let manifest_path = args.first().map(PathBuf::from);
-        eprintln!("[gui] manifest_path={:?}", manifest_path);
         let environment = Environment::detect();
         let installer = Installer::default();
 
@@ -97,6 +97,43 @@ pub fn run(args: Vec<String>) {
         }));
 
         build_window(app, data);
+    });
+
+    application.connect_open(move |_app, _files, _hint| {
+        eprintln!("[gui] connect_open called (ignoring files, using activate args)");
+        let locale = Locale::detect();
+        let environment = Environment::detect();
+        let installer = Installer::default();
+
+        let manifest_path = args.first().map(PathBuf::from);
+        let (manifest, _load_error) = match manifest_path.as_ref() {
+            Some(path) => match Manifest::from_path(path) {
+                Ok(m) => (Some(m), None),
+                Err(_) => (Some(demo_manifest()), None),
+            },
+            None => (Some(demo_manifest()), None),
+        };
+
+        let install_state = manifest
+            .as_ref()
+            .and_then(|m| installer.inspect(m, &environment).ok());
+
+        let data = Rc::new(RefCell::new(UiData {
+            locale,
+            manifest,
+            manifest_path,
+            environment,
+            installer,
+            window: None,
+            page: Page::Manifest,
+            verification: None,
+            install_state,
+            staged_path: None,
+            latest_progress: None,
+        }));
+
+        let app = _app.clone();
+        build_window(&app, data);
     });
 
     application.run();

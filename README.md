@@ -17,31 +17,45 @@ No new package format. No containers. Just a better first impression.
 
 ---
 
-## Install OpenInstall
-
-<a href="openinstall://openinstall?m=https://raw.githubusercontent.com/bejiihiu/openinstall/main/openinstall.json"><code>⬇ Install OpenInstall</code></a>
-<br>
-<br>
+## Install
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh
 ```
 
-Or via the URI itself once installed:
+That's it. The script detects your architecture (x86_64 / aarch64), downloads the right binary, and registers the desktop entry + URI handlers automatically. After install, `openinstall://` links in your browser will open directly in OpenInstall.
+
+<details>
+<summary>Other install methods</summary>
+
+### URI (once OpenInstall is installed)
 
 ```
 openinstall://openinstall?m=https://raw.githubusercontent.com/bejiihiu/openinstall/main/openinstall.json
 ```
 
-You can also build from source:
+### Build from source
 
 ```bash
 cargo build --release -p installer-cli --features gui
 cp target/release/installer ~/.local/bin/
-installer gui --register-desktop   # add to application menu (Linux)
+installer gui --register-desktop   # register in app menu + URI handlers
+```
 
-# update itself later:
+### Self-update
+
+```bash
 installer self-update
+```
+
+</details>
+
+## Quick start
+
+```bash
+installer detect                                    # show your distro, arch, package manager
+installer install https://example.com/app.json      # install an app from a manifest
+installer gui                                        # open the graphical installer
 ```
 
 ## Supported distros
@@ -53,37 +67,11 @@ installer self-update
 | Fedora / RHEL / CentOS | dnf | `fedora` |
 | openSUSE | zypper | `opensuse` |
 | Anything with PackageKit | pkcon | `fallback` |
-| Anything else | — | `fallback` (AppImage, static binary) |
+| Anything else | — | `fallback` (AppImage) |
 
-## Requirements
+## For app developers
 
-- **Linux** (tested on x86_64, aarch64)
-- **A package manager** from the table above (or PackageKit)
-- **curl/wget** (for the bootstrapper)
-- **GTK4 + libadwaita** (only for `installer gui` — Linux only, **not available on Windows**)
-
-## Quick start
-
-```bash
-# detect your system
-installer detect
-
-# install from a local manifest
-installer install ./cursor.json
-
-# verify integrity + signature first
-installer verify ./cursor.json
-
-# install directly from a URL via URI
-installer openinstall://cursor?m=https://example.com/cursor.json
-
-# register the app as a URI handler for your scheme
-installer uri register Cursor /usr/bin/cursor openinstall
-```
-
-## End-to-end: developer to user
-
-### 1. Developer publishes a manifest
+### 1. Publish a manifest
 
 ```bash
 installer publish \
@@ -96,31 +84,22 @@ installer publish \
   --output ./cursor.json
 ```
 
-### 2. Host the manifest and packages somewhere reachable
+### 2. Host it (GitHub release, CDN, your server)
 
-A GitHub release, your own CDN, or a static server.
-
-### 3. User installs with one command
+### 3. Users install with one command
 
 ```bash
-# via manifest URL directly
 installer install https://example.com/cursor.json
-
-# via install URI (browser link → installer)
-installer openinstall://cursor?m=https://example.com/cursor.json
 ```
 
-The installer downloads the manifest, picks the right package for the user's distro, verifies sha256 and signature (if present), then hands it to the system package manager.
+Or via a browser link:
 
-### 4. (Optional) Register a URI handler
-
-After installation, register the app as a handler so clicking `openinstall://cursor` in a browser opens the installed app:
-
-```bash
-installer uri register Cursor /usr/bin/cursor openinstall
+```
+openinstall://cursor?m=https://example.com/cursor.json
 ```
 
-## CLI
+<details>
+<summary>Full CLI reference</summary>
 
 ```
 installer detect                                    print distro/arch/package manager
@@ -139,7 +118,7 @@ installer cache info                                show cache size
 installer publish --name ... (see above)            generate a manifest
 installer serve <manifest> [addr]                   serve /app/latest on HTTP
 installer gui [manifest]                            launch graphical installer (Linux only)
-installer gui --register-desktop                    add to application menu
+installer gui --register-desktop                    add to application menu + URI handlers
 installer self-update                                download and replace itself
 
 # URI subcommands
@@ -147,7 +126,6 @@ installer uri <scheme://app>                        parse URI and print details
 installer uri <scheme://app?m=manifest_url>         parse and install from manifest URL
 installer uri desktop-entry <name> <path> [scheme]  generate a .desktop file
 installer uri register <name> <path> [scheme]       register URI handler in the system
-installer uri help                                  show URI help
 
 # Direct URI (same as `installer uri ...` but as top-level command)
 installer openinstall://cursor?m=https://example.com/manifest.json
@@ -155,60 +133,31 @@ installer openinstall://cursor?m=https://example.com/manifest.json
 installer signature verify <sig> <file>             check ed25519 signature
 ```
 
-### URI scheme
+</details>
 
-Three supported schemes:
+## Manifest format
 
-- `openinstall://app_id`
-- `openinstaller://app_id`
-- `linuxinstall://app_id`
-
-Query parameters:
-
-| Param | Description |
-|-------|-------------|
-| `m` | Manifest URL (short form) |
-| `manifest` | Manifest URL (full name) |
-
-Example:
-
-```
-openinstall://cursor?m=https://example.com/manifest.json
-```
-
-If `?m=` or `?manifest=` is present, the installer downloads the manifest and runs the full install flow. Without it, the installer just prints the parsed components.
-
-## GUI
-
-**Linux only** — does not build or run on Windows.
-
-```bash
-# if you have gtk4 and libadwaita installed
-installer gui ./manifest.json
-# or just drag & drop a .json file onto the window
+```json
+{
+    "name": "Cursor",
+    "publisher": "Anysphere",
+    "version": "1.5.0",
+    "description": "AI Code Editor",
+    "homepage": "https://cursor.sh",
+    "license": "MIT",
+    "packages": {
+        "arch": "https://example.com/cursor.pkg.tar.zst",
+        "ubuntu": "https://example.com/cursor.deb",
+        "fedora": "https://example.com/cursor.rpm",
+        "opensuse": "https://example.com/cursor.rpm",
+        "fallback": "https://example.com/cursor.AppImage"
+    },
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "ed25519:<public_key_hex>:<signature_hex>"
+}
 ```
 
-Shows the manifest details in a clean Adwaita window. Verify, install, remove, rollback — all clickable. Drag & drop a `.json` manifest onto the window to load it. The language follows your system locale (English and Russian right now; more translations welcome).
-
-Register in the application menu so it shows up in your launcher:
-
-```bash
-installer gui --register-desktop
-```
-
-This also registers the URI schemes (`openinstall://`, `openinstaller://`, `linuxinstall://`) so browser links can open directly in OpenInstall.
-
-## Bootstrapper
-
-For when you want users to just click and go. The bootstrapper grabs a manifest from a URL, picks the right package for the user's distro, downloads it, verifies, and hands off to the GUI.
-
-```bash
-# headless — downloads and installs silently
-installer-bootstrapper https://example.com/app.json --headless
-
-# with GUI — downloads then opens the installer window
-installer-bootstrapper https://example.com/app.json
-```
+See [docs/manifest.md](docs/manifest.md) for details.
 
 ## How it works
 
@@ -224,47 +173,26 @@ The core detects the environment by reading `/etc/os-release` and checking which
 
 Every package manager has its own adapter. Adding one is about 20 lines.
 
-## Manifest format
-
-```json
-{
-    "name": "Cursor",
-    "publisher": "Anysphere",
-    "version": "1.5.0",
-    "description": "AI Code Editor",
-    "homepage": "https://cursor.sh",
-    "license": "MIT",
-    "changelog": "See https://cursor.sh/changelog",
-    "packages": {
-        "arch": "https://example.com/cursor.pkg.tar.zst",
-        "ubuntu": "https://example.com/cursor.deb",
-        "fedora": "https://example.com/cursor.rpm",
-        "opensuse": "https://example.com/cursor.rpm",
-        "fallback": "https://example.com/cursor.AppImage"
-    },
-    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "signature": "ed25519:<public_key_hex>:<signature_hex>"
-}
-```
-
-See [docs/manifest.md](docs/manifest.md) for details.
-
 ## Security
 
 - All downloads go through TLS (`reqwest` + `rustls`)
 - Network requests have timeouts: 15s for manifests, 30s connect + 120s total for packages
 - SHA256 is checked before the package touches the package manager
 - Ed25519 signatures are verified with `ring`
-- If a signature is present and invalid, the install button disables and a red banner shows up
-- If no signature is provided, the UI says so — no silent trust
+
+## Requirements
+
+- **Linux** (x86_64 or aarch64)
+- **A package manager** from the table above (or PackageKit)
+- **curl** (for the install script)
+- **GTK4 + libadwaita** (only for `installer gui` — optional)
 
 ## Building
 
 ```bash
 cargo build --release
-# or just specific crates
-cargo build -p installer-core
-cargo build -p installer-cli --features gui   # include GUI (Linux only)
+# or specific crates
+cargo build -p installer-cli --features gui   # with GUI (Linux only)
 ```
 
 Tests:
@@ -274,15 +202,11 @@ cargo test -p installer-core
 cargo test -p installer-cli
 ```
 
-The GUI requires GTK4 and libadwaita development headers on your system (`libgtk-4-dev` and `libadwaita-1-dev` on Debian/Ubuntu, `gtk4` and `libadwaita` on Arch, etc).
+The GUI requires GTK4 and libadwaita development headers (`libgtk-4-dev` and `libadwaita-1-dev` on Debian/Ubuntu, `gtk4` and `libadwaita` on Arch).
 
 ## What this isn't
 
 It's not a new package manager. It's not a container runtime. It's not an app store. It's a frontend that reads a JSON file, downloads stuff, checks signatures, and calls your system's package manager. Nothing more.
-
-## What's next
-
-There's a roadmap in [docs/](docs/). Short version: live progress bars during install, a GitHub Action for auto-publishing manifests, and better post-install UX (launch, open folder).
 
 ## License
 
@@ -290,18 +214,10 @@ There's a roadmap in [docs/](docs/). Short version: live progress bars during in
 
 ## Support
 
-I'm not asking for donations or a subscription for every sneeze this project makes.
-
-If you run a Telegram channel, a Discord server, or just know people who'd find this useful — tell them about OpenInstall. That's already a big deal for me.
-
-Honestly, I didn't start this for attention. I just wanted my friend — who switched to Linux — to be able to install Discord with one click instead of googling what `.deb` is, what Flatpak is, what AUR is, and why there are five different ways to install one app
+If you run a Telegram channel, a Discord server, or just know people who'd find this useful — tell them about OpenInstall.
 
 If the project helped you — drop a ⭐ on GitHub. Helps other people find it.
 
-And if you want to support me personally — buy me a coffee or a meal for one evening. I'm a student too, and sometimes that kind of help goes a long way <3
-
-Thanks to everyone making Linux a little friendlier.
-
 ---
 
-Also read: [HONESTY.md](HONESTY.md) — why this project exists and why I'm pissed off about app installation on Linux 😄
+Also read: [HONESTY.md](HONESTY.md) — why this project exists.

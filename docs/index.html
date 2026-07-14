@@ -46,13 +46,9 @@ footer{margin:3rem 0 0;padding-top:1.5rem;border-top:1px solid #21262d;color:#8b
 
 <h2>Install</h2>
 
-<pre><code><span class="cmt"># Quick install (curl | sh)</span>
-curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh
+<pre><code>curl -sSf https://raw.githubusercontent.com/bejiihiu/openinstall/main/scripts/install.sh | sh</code></pre>
 
-<span class="cmt"># Or build from source</span>
-cargo build --release -p installer-cli --features gui
-cp target/release/installer ~/.local/bin/
-installer gui --register-desktop</code></pre>
+<p>Detects your architecture (x86_64 / aarch64), downloads the binary, and registers desktop entry + URI handlers automatically.</p>
 
 <h2>Quick start</h2>
 
@@ -84,6 +80,7 @@ installer openinstall://cursor?m=https://example.com/cursor.json</code></pre>
 <tr><td>installer publish --name ...</td><td>Generate a manifest</td></tr>
 <tr><td>installer serve &lt;manifest&gt; [addr]</td><td>Serve /app/latest on HTTP</td></tr>
 <tr><td>installer gui [manifest]</td><td>Launch graphical installer</td></tr>
+<tr><td>installer gui --register-desktop</td><td>Register in app menu + URI handlers</td></tr>
 <tr><td>installer self-update</td><td>Download and replace itself</td></tr>
 </table>
 
