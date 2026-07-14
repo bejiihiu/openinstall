@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
-use gio::prelude::*;
+use adw::gio::prelude::*;
 use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
