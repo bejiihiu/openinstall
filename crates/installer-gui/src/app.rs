@@ -46,14 +46,14 @@ enum Page {
     Error(String),
 }
 
-pub fn run() {
+pub fn run(args: Vec<String>) {
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
         .build();
 
-    application.connect_activate(|app| {
+    application.connect_activate(move |app| {
         let locale = Locale::detect();
-        let manifest_path = std::env::args().nth(1).map(PathBuf::from);
+        let manifest_path = args.first().map(PathBuf::from);
         let environment = Environment::detect();
         let installer = Installer::default();
 

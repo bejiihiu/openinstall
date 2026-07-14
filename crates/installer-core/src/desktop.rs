@@ -1,6 +1,6 @@
 use crate::InstallUri;
 
-fn escape_desktop_value(value: &str) -> String {
+pub fn escape_desktop_value(value: &str) -> String {
     value
         .replace('\\', "\\\\")
         .replace('\n', "\\n")

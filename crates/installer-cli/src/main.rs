@@ -468,24 +468,25 @@ fn gui_command(args: impl Iterator<Item = String>) -> Result<(), String> {
     if args.iter().any(|a| a == "--register-desktop") {
         return register_gui_desktop();
     }
-    installer_gui::app::run();
+    installer_gui::app::run(args);
     Ok(())
 }
 
 #[cfg(all(feature = "gui", target_os = "linux"))]
 fn register_gui_desktop() -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| format!("failed to get exe path: {e}"))?;
+    let exe_str = exe.display().to_string();
+    let escaped = installer_core::desktop::escape_desktop_value(&exe_str);
     let desktop = format!(
         "[Desktop Entry]\n\
          Type=Application\n\
          Name=OpenInstall\n\
          Comment=Linux Application Installer\n\
-         Exec={} gui %f\n\
+         Exec={escaped} gui %u\n\
          Icon=system-software-install\n\
          Terminal=false\n\
          Categories=Utility;\n\
-         MimeType=x-scheme-handler/openinstall;x-scheme-handler/openinstaller;x-scheme-handler/linuxinstall;\n",
-        exe.display()
+         MimeType=x-scheme-handler/openinstall;x-scheme-handler/openinstaller;x-scheme-handler/linuxinstall;\n"
     );
     let home = std::env::var("HOME").map_err(|_| "$HOME is not set".to_string())?;
     let apps_dir = PathBuf::from(&home).join(".local/share/applications");
