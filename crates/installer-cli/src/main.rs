@@ -151,7 +151,6 @@ fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
             None => Err("cache requires a subcommand: clear|info".to_string()),
         },
         Some("history") => {
-            let _manifest = load_manifest(args.next(), "history")?;
             let installer = Installer::default();
             let entries = installer.get_history().map_err(|error| error.to_string())?;
             if entries.is_empty() {
@@ -375,7 +374,7 @@ fn print_help() {
          update <manifest.json>\n  \
          reinstall <manifest.json>\n  \
          rollback <manifest.json>\n  \
-         history <manifest.json>\n  \
+         history\n  \
          cache clear\n  cache info\n  \
          uri <scheme://app>\n  \
          uri <scheme://app?m=manifest_url>     parse and install from manifest URL\n  \
