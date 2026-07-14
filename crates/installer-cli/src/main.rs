@@ -1,4 +1,5 @@
 use std::fs;
+use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -392,7 +393,8 @@ fn print_help() {
     );
 }
 
-fn publish_command(mut args: impl Iterator<Item = String>) -> Result<(), String> {
+fn publish_command(args: impl Iterator<Item = String>) -> Result<(), String> {
+    let mut args = args.peekable();
     let preinstall = optional_flag(&mut args, "--preinstall");
     let postinstall = optional_flag(&mut args, "--postinstall");
     let preremove = optional_flag(&mut args, "--preremove");
@@ -600,9 +602,9 @@ fn required_flag(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<
     }
 }
 
-fn optional_flag(args: &mut impl Iterator<Item = String>, flag: &str) -> Option<String> {
-    let next = args.next()?;
-    if next == flag {
+fn optional_flag(args: &mut Peekable<impl Iterator<Item = String>>, flag: &str) -> Option<String> {
+    if args.peek()? == flag {
+        args.next();
         args.next()
     } else {
         None
@@ -674,14 +676,14 @@ mod tests {
     #[test]
     fn optional_flag_returns_some_when_present() {
         let args = vec!["--arch".to_string(), "x86_64".to_string()];
-        let result = optional_flag(&mut args.into_iter(), "--arch");
+        let result = optional_flag(&mut args.into_iter().peekable(), "--arch");
         assert_eq!(result, Some("x86_64".to_string()));
     }
 
     #[test]
     fn optional_flag_returns_none_when_missing() {
         let args = vec!["--other".to_string()];
-        let result = optional_flag(&mut args.into_iter(), "--arch");
+        let result = optional_flag(&mut args.into_iter().peekable(), "--arch");
         assert_eq!(result, None);
     }
 
