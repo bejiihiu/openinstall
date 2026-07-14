@@ -1,6 +1,5 @@
 use std::fmt;
 use std::fs;
-use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
@@ -299,7 +298,7 @@ fn command_candidates(binary: &str) -> Vec<String> {
 
     #[cfg(windows)]
     {
-        let has_extension = Path::new(binary).extension().is_some();
+        let has_extension = std::path::Path::new(binary).extension().is_some();
         if !has_extension {
             if let Some(exts) = std::env::var_os("PATHEXT") {
                 for ext in exts
