@@ -46,7 +46,17 @@ enum Page {
     Error(String),
 }
 
+fn ensure_gtk_renderer() {
+    if std::env::var("GSK_RENDERER").is_err() {
+        std::env::set_var("GSK_RENDERER", "ngl");
+    }
+    if std::env::var("GDK_DISABLE").is_err() {
+        std::env::set_var("GDK_DISABLE", "vulkan");
+    }
+}
+
 pub fn run(args: Vec<String>) {
+    ensure_gtk_renderer();
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
         .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
