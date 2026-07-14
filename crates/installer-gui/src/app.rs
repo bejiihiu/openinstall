@@ -57,14 +57,17 @@ fn ensure_gtk_renderer() {
 
 pub fn run(args: Vec<String>) {
     ensure_gtk_renderer();
+    eprintln!("[gui] run: args={:?}", args);
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
         .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
     application.connect_activate(move |app| {
+        eprintln!("[gui] connect_activate called");
         let locale = Locale::detect();
         let manifest_path = args.first().map(PathBuf::from);
+        eprintln!("[gui] manifest_path={:?}", manifest_path);
         let environment = Environment::detect();
         let installer = Installer::default();
 
@@ -98,6 +101,7 @@ pub fn run(args: Vec<String>) {
     });
 
     application.connect_open(move |_app, files, _hint| {
+        eprintln!("[gui] connect_open called, files={}", files.len());
         if let Some(file) = files.first() {
             if let Some(path) = file.path() {
                 let path_str = path.to_string_lossy().to_string();
@@ -139,6 +143,7 @@ pub fn run(args: Vec<String>) {
 }
 
 fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
+    eprintln!("[gui] build_window called, manifest={}", data.borrow().manifest.is_some());
     let window = adw::ApplicationWindow::builder()
         .application(app)
         .default_width(800)
@@ -249,6 +254,7 @@ fn render_manifest(
     parent: &gtk::Box,
     tx: &mpsc::Sender<ProgressUpdate>,
 ) {
+    eprintln!("[gui] render_manifest called, page={:?}", data.borrow().page);
     let current = data.borrow();
     let locale = current.locale;
     let manifest = match &current.manifest {
