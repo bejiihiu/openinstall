@@ -6,7 +6,8 @@ mod i18n;
 
 #[cfg(target_os = "linux")]
 fn main() {
-    app::run();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    app::run(args);
 }
 
 #[cfg(not(target_os = "linux"))]
