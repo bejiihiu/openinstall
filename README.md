@@ -1,5 +1,14 @@
 # OpenInstall
 
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/bejiihiu/openinstall/ci.yml?branch=main&label=CI">
+  <img src="https://img.shields.io/badge/rust-1.85%2B-orange">
+  <img src="https://img.shields.io/github/license/bejiihiu/openinstall">
+  <img src="https://img.shields.io/github/stars/bejiihiu/openinstall">
+  <img src="https://img.shields.io/github/v/release/bejiihiu/openinstall">
+  <img src="https://img.shields.io/badge/Linux-only-blue">
+</p>
+
 A Linux app installer that works across distros. One CLI, one GUI — apt, dnf, pacman, zypper, all the same way.
 
 The problem: you go to download an app on Linux and get six choices, none of which you recognize. Or you copy-paste a curl pipe from a README and hope for the best. OpenInstall is a thin wrapper around your system's native package manager. It figures out what distro you're on, downloads the right package, verifies the signature, then hands it to apt or pacman or whatever you've got.
