@@ -466,6 +466,25 @@ impl Installer {
             });
         }
 
+        if package.slot == PackageSlot::Flatpak
+            && package.reference.starts_with("flatpak://")
+        {
+            let app_id = package.reference.strip_prefix("flatpak://").unwrap();
+            let Some(adapter) = adapter_for(PackageManager::Flatpak) else {
+                return Err(InstallerError::UnsupportedManager(PackageManager::Flatpak));
+            };
+            let (cmd, args) = adapter.remove_command(app_id);
+            self.run_command(&cmd, &args)?;
+            self.run_scripts(&manifest.scripts, "postremove")?;
+            let command = format!("{cmd} {}", args.join(" "));
+            return Ok(InstallOutcome {
+                package_id,
+                package_manager: package.package_manager,
+                staged_path: PathBuf::new(),
+                command,
+            });
+        }
+
         let command = self.remove_with_package_manager(package.package_manager, &package_id)?;
         self.run_scripts(&manifest.scripts, "postremove")?;
 
