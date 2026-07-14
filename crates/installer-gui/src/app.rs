@@ -48,7 +48,7 @@ enum Page {
 
 fn ensure_gtk_renderer() {
     if std::env::var("GSK_RENDERER").is_err() {
-        std::env::set_var("GSK_RENDERER", "ngl");
+        std::env::set_var("GSK_RENDERER", "cairo");
     }
     if std::env::var("GDK_DISABLE").is_err() {
         std::env::set_var("GDK_DISABLE", "vulkan");

@@ -482,7 +482,7 @@ fn register_gui_desktop() -> Result<(), String> {
          Type=Application\n\
          Name=OpenInstall\n\
          Comment=Linux Application Installer\n\
-         Exec=env GSK_RENDERER=ngl GDK_DISABLE=vulkan {escaped} gui %u\n\
+         Exec=env GSK_RENDERER=cairo GDK_DISABLE=vulkan {escaped} gui %u\n\
          Icon=system-software-install\n\
          Terminal=false\n\
          Categories=Utility;\n\
