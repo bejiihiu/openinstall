@@ -30,12 +30,14 @@ struct UiData {
     manifest_path: Option<PathBuf>,
     environment: Environment,
     installer: Installer,
-    window: Option<gtk::Window>,
+    window: Option<adw::ApplicationWindow>,
     page: Page,
     verification: Option<VerificationOutcome>,
     install_state: Option<InstallationState>,
     staged_path: Option<PathBuf>,
     latest_progress: Option<InstallProgress>,
+    toast_overlay: Option<adw::ToastOverlay>,
+    progress_bar: Option<gtk::ProgressBar>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,7 +59,6 @@ fn ensure_gtk_renderer() {
 
 pub fn run(args: Vec<String>) {
     ensure_gtk_renderer();
-    eprintln!("[gui] run: args={:?}", args);
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
         .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
@@ -66,7 +67,6 @@ pub fn run(args: Vec<String>) {
     let args_activate = args.clone();
     let args_open = args;
     application.connect_activate(move |app| {
-        eprintln!("[gui] connect_activate called");
         let locale = Locale::detect();
         let manifest_path = args_activate.first().map(PathBuf::from);
         let environment = Environment::detect();
@@ -96,25 +96,27 @@ pub fn run(args: Vec<String>) {
             install_state,
             staged_path: None,
             latest_progress: None,
+            toast_overlay: None,
+            progress_bar: None,
         }));
 
         build_window(app, data);
     });
 
     application.connect_open(move |_app, _files, _hint| {
-        eprintln!("[gui] connect_open called (ignoring files, using activate args)");
         let locale = Locale::detect();
         let environment = Environment::detect();
         let installer = Installer::default();
 
         let manifest_path = args_open.first().map(PathBuf::from);
-        let (manifest, _load_error): (Option<Manifest>, Option<String>) = match manifest_path.as_ref() {
-            Some(path) => match Manifest::from_path(path) {
-                Ok(m) => (Some(m), None),
-                Err(_) => (Some(demo_manifest()), None),
-            },
-            None => (Some(demo_manifest()), None),
-        };
+        let (manifest, _load_error): (Option<Manifest>, Option<String>) =
+            match manifest_path.as_ref() {
+                Some(path) => match Manifest::from_path(path) {
+                    Ok(m) => (Some(m), None),
+                    Err(_) => (Some(demo_manifest()), None),
+                },
+                None => (Some(demo_manifest()), None),
+            };
 
         let install_state = manifest
             .as_ref()
@@ -132,6 +134,8 @@ pub fn run(args: Vec<String>) {
             install_state,
             staged_path: None,
             latest_progress: None,
+            toast_overlay: None,
+            progress_bar: None,
         }));
 
         let app = _app.clone();
@@ -142,39 +146,85 @@ pub fn run(args: Vec<String>) {
 }
 
 fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
-    eprintln!("[gui] build_window called, manifest={}", data.borrow().manifest.is_some());
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .default_width(800)
-        .default_height(700)
+        .default_width(600)
+        .default_height(600)
         .build();
 
-    let header = adw::HeaderBar::builder()
-        .title_widget(&adw::WindowTitle::new(
-            t(data.borrow().locale, "app.title"),
-            t(data.borrow().locale, "app.subtitle"),
-        ))
-        .build();
+    let toast_overlay = adw::ToastOverlay::new();
 
-    let nav = adw::NavigationView::new();
     let toolbar = adw::ToolbarView::new();
-    toolbar.set_content(Some(&nav));
-    toolbar.add_top_bar(&header);
-    window.set_content(Some(&toolbar));
 
-    let (tx, rx) = mpsc::channel::<ProgressUpdate>();
+    let header = adw::HeaderBar::new();
+
+    let subtitle = data.borrow().manifest.as_ref().map(|m| m.publisher.clone());
+    let title_widget = adw::WindowTitle::new(
+        t(data.borrow().locale, "app.title"),
+        subtitle.as_deref().unwrap_or(""),
+    );
+    header.set_title_widget(Some(&title_widget));
+
+    let menu = adw::gio::Menu::new();
+    let section1 = adw::gio::Menu::new();
+    section1.append(
+        Some(&t(data.borrow().locale, "menu.verify")),
+        Some("app.verify"),
+    );
+    section1.append(
+        Some(&t(data.borrow().locale, "menu.rollback")),
+        Some("app.rollback"),
+    );
+    section1.append(
+        Some(&t(data.borrow().locale, "menu.reload")),
+        Some("app.reload"),
+    );
+    menu.append_section(None, &section1);
+
+    let section2 = adw::gio::Menu::new();
+    section2.append(
+        Some(&t(data.borrow().locale, "menu.cache_info")),
+        Some("app.cache-info"),
+    );
+    section2.append(
+        Some(&t(data.borrow().locale, "menu.history")),
+        Some("app.history"),
+    );
+    menu.append_section(None, &section2);
+
+    let section3 = adw::gio::Menu::new();
+    section3.append(
+        Some(&t(data.borrow().locale, "menu.about")),
+        Some("app.about"),
+    );
+    menu.append_section(None, &section3);
+
+    let menu_button = adw::MenuButton::builder()
+        .icon_name("open-menu-symbolic")
+        .menu_model(&menu)
+        .build();
+
+    header.pack_end(&menu_button);
+    toolbar.add_top_bar(&header);
+
+    let progress_bar = gtk::ProgressBar::new();
+    progress_bar.add_css_class("osd");
+    progress_bar.set_visible(false);
+    toolbar.add_top_bar(&progress_bar);
 
     let page_content = gtk::Box::new(gtk::Orientation::Vertical, 0);
     page_content.set_hexpand(true);
     page_content.set_vexpand(true);
+    toast_overlay.set_child(Some(&page_content));
+    toolbar.set_content(Some(&toast_overlay));
 
-    data.borrow_mut().window = Some(window.upcast_ref::<gtk::Window>().clone());
+    window.set_content(Some(&toolbar));
 
-    let nav_page = adw::NavigationPage::builder()
-        .title(t(data.borrow().locale, "app.title"))
-        .child(&page_content)
-        .build();
-    nav.push(&nav_page);
+    data.borrow_mut().window = Some(window.clone());
+    data.borrow_mut().toast_overlay = Some(toast_overlay.clone());
+    data.borrow_mut().progress_bar = Some(progress_bar.clone());
+
+    let (tx, rx) = mpsc::channel::<ProgressUpdate>();
 
     let refresh: RefreshFn = Rc::new(RefCell::new(None));
 
@@ -195,6 +245,150 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         }
     }));
 
+    let action_group = adw::gio::SimpleActionGroup::new();
+    window.add_action_group("app", &action_group);
+
+    let data_v = Rc::clone(&data);
+    let tx_v = tx.clone();
+    let action = adw::gio::SimpleAction::new("verify", None);
+    action.connect_activate(move |_, _| {
+        let manifest = data_v.borrow().manifest.clone();
+        let env = data_v.borrow().environment.clone();
+        let installer = data_v.borrow().installer.clone();
+        let tx = tx_v.clone();
+        std::thread::spawn(move || {
+            let m = match manifest {
+                Some(ref m) => m.clone(),
+                None => return,
+            };
+            let result = installer.verify(&m, &env).map_err(|e| e.to_string());
+            let _ = tx.send(ProgressUpdate::VerifyResult(result));
+        });
+    });
+    action_group.add_action(&action);
+
+    let data_r = Rc::clone(&data);
+    let tx_r = tx.clone();
+    let action = adw::gio::SimpleAction::new("rollback", None);
+    action.connect_activate(move |_, _| {
+        let mut d = data_r.borrow_mut();
+        d.page = Page::Installing;
+        let manifest = d.manifest.clone();
+        let env = d.environment.clone();
+        let installer = d.installer.clone();
+        let tx = tx_r.clone();
+        drop(d);
+        std::thread::spawn(move || {
+            let m = match manifest {
+                Some(ref m) => m.clone(),
+                None => return,
+            };
+            let result = installer
+                .rollback(&m, &env)
+                .map(|o| (o.command, o.staged_path))
+                .map_err(|e| e.to_string());
+            let _ = tx.send(ProgressUpdate::RollbackResult(result));
+        });
+    });
+    action_group.add_action(&action);
+
+    let data_rl = Rc::clone(&data);
+    let refresh_rl = Rc::clone(&refresh);
+    let action = adw::gio::SimpleAction::new("reload", None);
+    action.connect_activate(move |_, _| {
+        let mut d = data_rl.borrow_mut();
+        let path = d.manifest_path.clone();
+        let env = Environment::detect();
+        let installer = Installer::default();
+        let (manifest, _) = match path.as_ref() {
+            Some(p) => match Manifest::from_path(p) {
+                Ok(m) => (Some(m), None::<()>),
+                Err(_) => (None, None),
+            },
+            None => (Some(demo_manifest()), None),
+        };
+        let install_state = manifest
+            .as_ref()
+            .and_then(|m| installer.inspect(m, &env).ok());
+        d.environment = env;
+        d.installer = installer;
+        d.manifest = manifest;
+        d.install_state = install_state;
+        d.verification = None;
+        d.staged_path = None;
+        drop(d);
+        if let Some(ref f) = *refresh_rl.borrow() {
+            f();
+        }
+    });
+    action_group.add_action(&action);
+
+    let data_ci = Rc::clone(&data);
+    let action = adw::gio::SimpleAction::new("cache-info", None);
+    action.connect_activate(move |_, _| {
+        let installer = data_ci.borrow().installer.clone();
+        let result = installer
+            .cache_info()
+            .map(|info| format!("{} files, {} bytes", info.file_count, info.total_bytes))
+            .unwrap_or_else(|e| e.to_string());
+        if let Some(ref ov) = data_ci.borrow().toast_overlay {
+            let toast = adw::Toast::new(&result);
+            ov.add_toast(&toast);
+        }
+    });
+    action_group.add_action(&action);
+
+    let data_h = Rc::clone(&data);
+    let action = adw::gio::SimpleAction::new("history", None);
+    action.connect_activate(move |_, _| {
+        let installer = data_h.borrow().installer.clone();
+        let result = installer
+            .get_history()
+            .map(|entries| {
+                if entries.is_empty() {
+                    "No history".to_string()
+                } else {
+                    entries
+                        .iter()
+                        .map(|e| {
+                            format!(
+                                "{} v{} via {} — {}",
+                                e.package_id,
+                                e.version,
+                                e.package_manager,
+                                e.installed_at_unix_secs
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                }
+            })
+            .unwrap_or_else(|e| e.to_string());
+        if let Some(ref ov) = data_h.borrow().toast_overlay {
+            let toast = adw::Toast::new(&result);
+            ov.add_toast(&toast);
+        }
+    });
+    action_group.add_action(&action);
+
+    let window_clone = window.clone();
+    let action = adw::gio::SimpleAction::new("about", None);
+    action.connect_activate(move |_, _| {
+        let about = adw::AboutDialog::builder()
+            .application_name("OpenInstall")
+            .application_icon("system-software-install-symbolic")
+            .version(env!("CARGO_PKG_VERSION"))
+            .developer_name("OpenInstall Contributors")
+            .developers(vec!["OpenInstall Contributors".to_string()])
+            .copyright("© 2025 OpenInstall Contributors")
+            .license_type(gtk::License::MitX11)
+            .website("https://github.com/bejiihiu/openinstall")
+            .issue_url("https://github.com/bejiihiu/openinstall/issues")
+            .build();
+        about.present(Some(&window_clone));
+    });
+    action_group.add_action(&action);
+
     let data_clone = Rc::clone(&data);
     let refresh_clone = Rc::clone(&refresh);
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
@@ -206,7 +400,13 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
                     d.latest_progress = Some(p);
                 }
                 ProgressUpdate::VerifyResult(result) => match result {
-                    Ok(outcome) => d.verification = Some(outcome),
+                    Ok(outcome) => {
+                        if let Some(ref ov) = d.toast_overlay {
+                            let toast = adw::Toast::new(t(d.locale, "toast.verified"));
+                            ov.add_toast(&toast);
+                        }
+                        d.verification = Some(outcome);
+                    }
                     Err(e) => d.page = Page::Error(e),
                 },
                 ProgressUpdate::InstallResult(result) => match result {
@@ -253,132 +453,137 @@ fn render_manifest(
     parent: &gtk::Box,
     tx: &mpsc::Sender<ProgressUpdate>,
 ) {
-    eprintln!("[gui] render_manifest called, page={:?}", data.borrow().page);
-    let current = data.borrow();
-    let locale = current.locale;
-    let manifest = match &current.manifest {
+    let locale = data.borrow().locale;
+    let manifest = match &data.borrow().manifest {
         Some(m) => m.clone(),
         None => return,
     };
-    let env = current.environment.clone();
-    let install_state = current.install_state.clone();
-    let verification = current.verification.clone();
-    drop(current);
+    let env = data.borrow().environment.clone();
+    let install_state = data.borrow().install_state.clone();
+    let verification = data.borrow().verification.clone();
 
     let scroll = gtk::ScrolledWindow::new();
     scroll.set_vexpand(true);
     scroll.set_hexpand(true);
+
+    let clamp = adw::Clamp::builder()
+        .maximum_size(600)
+        .tightening_threshold(400)
+        .build();
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 16);
     content.set_margin_top(24);
     content.set_margin_bottom(24);
     content.set_margin_start(24);
     content.set_margin_end(24);
-    scroll.set_child(Some(&content));
-    parent.append(&scroll);
 
     if verification
         .as_ref()
         .is_some_and(|v| v.signature_ok == Some(false))
     {
-        let warn = gtk::Label::builder()
-            .label(t(locale, "manifest.signature_warning"))
-            .xalign(0.0)
-            .wrap(true)
-            .css_classes(["error"])
-            .margin_bottom(12)
+        let banner = adw::Banner::builder()
+            .title(t(locale, "manifest.signature_warning"))
+            .banner_style(adw::BannerStyle::Danger)
             .build();
-        content.append(&warn);
+        content.append(&banner);
     }
 
-    let name_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-
-    if let Some(ref img) = manifest.image {
-        let pic = gtk::Picture::for_filename(img);
-        pic.set_width_request(64);
-        pic.set_height_request(64);
-        name_row.append(&pic);
-    }
-
-    let name_label = gtk::Label::builder()
-        .label(&manifest.name)
-        .xalign(0.0)
-        .css_classes(["title-1"])
-        .build();
-    name_row.append(&name_label);
-    content.append(&name_row);
-
-    let pub_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let pub_label = gtk::Label::builder()
-        .label(format!(
-            "{}: {}",
-            t(locale, "detail.publisher"),
-            manifest.publisher
-        ))
-        .xalign(0.0)
-        .build();
-    let ver_label = gtk::Label::builder()
-        .label(format!(
-            "{}: {}",
-            t(locale, "detail.version"),
-            manifest.version
-        ))
-        .xalign(0.0)
-        .build();
-    pub_row.append(&pub_label);
-    pub_row.append(&ver_label);
-    content.append(&pub_row);
-
-    let desc_label = gtk::Label::builder()
-        .label(&manifest.description)
-        .xalign(0.0)
-        .wrap(true)
-        .selectable(true)
-        .build();
-    content.append(&desc_label);
-
-    let clamp = adw::Clamp::builder()
-        .maximum_size(600)
-        .tightening_threshold(400)
-        .build();
-    let group = adw::PreferencesGroup::new();
-    clamp.set_child(Some(&group));
-
-    add_detail_row(&group, t(locale, "detail.publisher"), &manifest.publisher);
-    add_detail_row(&group, t(locale, "detail.version"), &manifest.version);
-    add_detail_row(
-        &group,
-        t(locale, "detail.license"),
-        manifest
-            .license
-            .as_deref()
-            .unwrap_or(t(locale, "detail.not_set")),
-    );
-    add_detail_row(
-        &group,
-        t(locale, "detail.homepage"),
-        manifest
-            .homepage
-            .as_deref()
-            .unwrap_or(t(locale, "detail.not_set")),
-    );
-    add_detail_row(&group, t(locale, "detail.architecture"), &env.architecture);
-    add_detail_row(&group, t(locale, "detail.distribution"), &env.distro);
-    add_detail_row(
-        &group,
-        t(locale, "detail.package_manager"),
-        &env.package_manager.to_string(),
-    );
-    if let Some(changelog) = &manifest.changelog {
-        add_detail_row(&group, t(locale, "detail.changelog"), changelog);
-    }
-
-    let integrity = manifest
-        .sha256
+    let icon_name = manifest
+        .image
         .as_deref()
-        .map(|_| t(locale, "detail.available"))
+        .unwrap_or("system-software-install-symbolic");
+    let desc = if manifest.description.is_empty() {
+        &manifest.publisher
+    } else {
+        &manifest.description
+    };
+    let status_page = adw::StatusPage::builder()
+        .icon_name(icon_name)
+        .title(&manifest.name)
+        .description(desc)
+        .build();
+    content.append(&status_page);
+
+    content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+
+    let details_group = adw::PreferencesGroup::builder()
+        .title(t(locale, "status.details"))
+        .build();
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.publisher"))
+        .subtitle(&manifest.publisher)
+        .build();
+    details_group.add(&row);
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.version"))
+        .subtitle(&manifest.version)
+        .build();
+    details_group.add(&row);
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.license"))
+        .subtitle(
+            manifest
+                .license
+                .as_deref()
+                .unwrap_or(t(locale, "detail.not_set")),
+        )
+        .build();
+    details_group.add(&row);
+
+    let homepage_val = manifest
+        .homepage
+        .as_deref()
         .unwrap_or(t(locale, "detail.not_set"));
-    add_detail_row(&group, t(locale, "detail.integrity"), integrity);
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.homepage"))
+        .subtitle(homepage_val)
+        .activatable(true)
+        .build();
+    if let Some(ref url) = manifest.homepage {
+        let url = url.clone();
+        row.connect_activated(move |_| {
+            let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+        });
+    }
+    details_group.add(&row);
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.architecture"))
+        .subtitle(&env.architecture)
+        .build();
+    details_group.add(&row);
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.distribution"))
+        .subtitle(&env.distro)
+        .build();
+    details_group.add(&row);
+
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.package_manager"))
+        .subtitle(&env.package_manager.to_string())
+        .build();
+    details_group.add(&row);
+
+    content.append(&details_group);
+
+    let security_group = adw::PreferencesGroup::builder()
+        .title(t(locale, "status.security"))
+        .build();
+
+    let integrity = if manifest.sha256.is_some() {
+        t(locale, "detail.available")
+    } else {
+        t(locale, "detail.not_set")
+    };
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.integrity"))
+        .subtitle(integrity)
+        .build();
+    security_group.add(&row);
 
     let sig_status = match &verification {
         Some(v) => {
@@ -398,70 +603,48 @@ fn render_manifest(
             }
         }
     };
-    add_detail_row(&group, t(locale, "detail.signature"), sig_status);
+    let row = adw::ActionRow::builder()
+        .title(t(locale, "detail.signature"))
+        .subtitle(sig_status)
+        .build();
+    security_group.add(&row);
 
-    let selection = manifest.package_for_environment(&env);
-    if let Some(ref pkg) = selection {
-        add_detail_row(&group, t(locale, "detail.package"), pkg.reference);
-    }
-    content.append(&clamp);
+    content.append(&security_group);
 
-    let state_label = gtk::Label::new(None);
-    state_label.set_xalign(0.0);
-    state_label.set_wrap(true);
-    state_label.set_selectable(true);
-    match &install_state {
-        Some(InstallationState::NotInstalled) => {
-            state_label.set_label(t(locale, "state.not_installed"));
-        }
-        Some(InstallationState::SameVersion { version }) => {
-            state_label.set_label(&format!(
-                "{} ({})",
-                t(locale, "state.same_version"),
-                version
-            ));
-        }
-        Some(InstallationState::DifferentVersion {
-            current_version,
-            available_version,
-        }) => {
-            state_label.set_label(&format!(
-                "{}: {} \u{2192} {}",
-                t(locale, "state.update_available"),
+    if install_state.is_some() {
+        let status_group = adw::PreferencesGroup::builder()
+            .title(t(locale, "status.status"))
+            .build();
+
+        let state_text = match &install_state {
+            Some(InstallationState::NotInstalled) => t(locale, "state.not_installed").to_string(),
+            Some(InstallationState::SameVersion { version }) => {
+                format!("{} ({})", t(locale, "state.same_version"), version)
+            }
+            Some(InstallationState::DifferentVersion {
                 current_version,
                 available_version,
-            ));
-        }
-        None => {}
-    }
-    content.append(&state_label);
-
-    if let Some(ref v) = verification {
-        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 4);
-        let sha_label = gtk::Label::builder()
-            .xalign(0.0)
-            .label(if v.sha256_ok {
-                t(locale, "verify.sha256_ok")
-            } else {
-                t(locale, "verify.sha256_mismatch")
-            })
-            .build();
-        vbox.append(&sha_label);
-        let sig_label_text = match v.signature_ok {
-            Some(true) => t(locale, "verify.signature_ok"),
-            Some(false) => t(locale, "verify.signature_invalid"),
-            None => t(locale, "verify.signature_missing"),
+            }) => {
+                format!(
+                    "{}: {} \u{2192} {}",
+                    t(locale, "state.update_available"),
+                    current_version,
+                    available_version,
+                )
+            }
+            None => String::new(),
         };
-        let sig_label = gtk::Label::builder()
-            .xalign(0.0)
-            .label(sig_label_text)
+        let row = adw::ActionRow::builder()
+            .title(t(locale, "status.status"))
+            .subtitle(&state_text)
             .build();
-        vbox.append(&sig_label);
-        content.append(&vbox);
+        status_group.add(&row);
+        content.append(&status_group);
     }
 
     let button_box = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-    button_box.set_margin_top(16);
+    button_box.set_halign(gtk::Align::Center);
+    button_box.set_margin_top(12);
 
     let install_btn = gtk::Button::builder()
         .label(match &install_state {
@@ -469,36 +652,28 @@ fn render_manifest(
             Some(InstallationState::SameVersion { .. }) => t(locale, "manifest.reinstall"),
             Some(InstallationState::DifferentVersion { .. }) => t(locale, "manifest.update"),
         })
-        .css_classes(["suggested-action"])
+        .css_classes(["suggested-action", "pill"])
         .build();
 
     let remove_btn = gtk::Button::builder()
         .label(t(locale, "manifest.remove"))
-        .css_classes(["destructive-action"])
+        .css_classes(["destructive-action", "pill"])
         .build();
 
-    let verify_btn = gtk::Button::with_label(t(locale, "manifest.verify"));
-    let rollback_btn = gtk::Button::with_label(t(locale, "manifest.rollback"));
-    let reload_btn = gtk::Button::with_label(t(locale, "manifest.reload"));
-    let cache_btn = gtk::Button::with_label(t(locale, "manifest.cache_info"));
-    let history_btn = gtk::Button::with_label(t(locale, "manifest.history"));
-
-    button_box.append(&install_btn);
-    button_box.append(&remove_btn);
-    button_box.append(&verify_btn);
-    button_box.append(&rollback_btn);
-    button_box.append(&reload_btn);
-    button_box.append(&cache_btn);
-    button_box.append(&history_btn);
-    content.append(&button_box);
-
-    let has_pkg = selection.is_some();
+    let has_pkg = manifest.package_for_environment(&env).is_some();
     let bad_sig = verification
         .as_ref()
         .is_some_and(|v| v.signature_ok == Some(false));
     install_btn.set_sensitive(has_pkg && !bad_sig);
     remove_btn.set_sensitive(has_pkg);
-    verify_btn.set_sensitive(has_pkg);
+
+    button_box.append(&install_btn);
+    button_box.append(&remove_btn);
+    content.append(&button_box);
+
+    clamp.set_child(Some(&content));
+    scroll.set_child(Some(&clamp));
+    parent.append(&scroll);
 
     let data_install = Rc::clone(data);
     let tx_install = tx.clone();
@@ -516,7 +691,6 @@ fn render_manifest(
                 None => return,
             };
             let (progress_tx, progress_rx) = mpsc::channel::<InstallProgress>();
-            // Forward progress updates to GUI channel
             let tx_fwd = tx.clone();
             std::thread::spawn(move || {
                 while let Ok(p) = progress_rx.recv() {
@@ -555,225 +729,70 @@ fn render_manifest(
             let _ = tx.send(ProgressUpdate::RemoveResult(result));
         });
     });
-
-    let data_verify = Rc::clone(data);
-    let tx_verify = tx.clone();
-    verify_btn.connect_clicked(move |_| {
-        let manifest = data_verify.borrow().manifest.clone();
-        let env = data_verify.borrow().environment.clone();
-        let installer = data_verify.borrow().installer.clone();
-        let tx = tx_verify.clone();
-        std::thread::spawn(move || {
-            let m = match manifest {
-                Some(ref m) => m.clone(),
-                None => return,
-            };
-            let result = installer.verify(&m, &env).map_err(|e| e.to_string());
-            let _ = tx.send(ProgressUpdate::VerifyResult(result));
-        });
-    });
-
-    let data_rollback = Rc::clone(data);
-    let tx_rollback = tx.clone();
-    rollback_btn.connect_clicked(move |_| {
-        let mut d = data_rollback.borrow_mut();
-        d.page = Page::Installing;
-        let manifest = d.manifest.clone();
-        let env = d.environment.clone();
-        let installer = d.installer.clone();
-        let tx = tx_rollback.clone();
-        drop(d);
-        std::thread::spawn(move || {
-            let m = match manifest {
-                Some(ref m) => m.clone(),
-                None => return,
-            };
-            let result = installer
-                .rollback(&m, &env)
-                .map(|o| (o.command, o.staged_path))
-                .map_err(|e| e.to_string());
-            let _ = tx.send(ProgressUpdate::RollbackResult(result));
-        });
-    });
-
-    let data_reload = Rc::clone(data);
-    let parent_clone = parent.clone();
-    let tx_reload = tx.clone();
-    reload_btn.connect_clicked(move |_| {
-        let mut d = data_reload.borrow_mut();
-        let path = d.manifest_path.clone();
-        let env = Environment::detect();
-        let installer = Installer::default();
-        let (manifest, _) = match path.as_ref() {
-            Some(p) => match Manifest::from_path(p) {
-                Ok(m) => (Some(m), None::<()>),
-                Err(_) => (None, None),
-            },
-            None => (Some(demo_manifest()), None),
-        };
-        let install_state = manifest
-            .as_ref()
-            .and_then(|m| installer.inspect(m, &env).ok());
-        d.environment = env;
-        d.installer = installer;
-        d.manifest = manifest;
-        d.install_state = install_state;
-        d.verification = None;
-        d.staged_path = None;
-        drop(d);
-        clear_children(&parent_clone);
-        render_manifest(&data_reload, &parent_clone, &tx_reload);
-    });
-
-    let data_cache = Rc::clone(data);
-    cache_btn.connect_clicked(move |_| {
-        let installer = data_cache.borrow().installer.clone();
-        let result = installer
-            .cache_info()
-            .map(|info| format!("{} files, {} bytes", info.file_count, info.total_bytes))
-            .unwrap_or_else(|e| e.to_string());
-        // Show in a transient dialog using gtk::AlertDialog (GTK4)
-        let dialog = gtk::AlertDialog::builder()
-            .message(t(data_cache.borrow().locale, "manifest.cache_info"))
-            .detail(&result)
-            .build();
-        dialog.show(None::<&gtk::Window>);
-    });
-
-    let data_history = Rc::clone(data);
-    history_btn.connect_clicked(move |_| {
-        let installer = data_history.borrow().installer.clone();
-        let result = installer
-            .get_history()
-            .map(|entries| {
-                if entries.is_empty() {
-                    "No history".to_string()
-                } else {
-                    entries
-                        .iter()
-                        .map(|e| {
-                            format!(
-                                "{} v{} via {} — {}",
-                                e.package_id,
-                                e.version,
-                                e.package_manager,
-                                e.installed_at_unix_secs
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                }
-            })
-            .unwrap_or_else(|e| e.to_string());
-        let dialog = gtk::AlertDialog::builder()
-            .message(t(data_history.borrow().locale, "manifest.history"))
-            .detail(&result)
-            .build();
-        dialog.show(None::<&gtk::Window>);
-    });
 }
 
 fn render_installing(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
     let locale = data.borrow().locale;
 
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 16);
-    vbox.set_valign(gtk::Align::Center);
-    vbox.set_halign(gtk::Align::Center);
-    vbox.set_margin_top(48);
-
-    let label = gtk::Label::builder()
-        .label(t(locale, "install.progress"))
-        .css_classes(["title-2"])
+    let status_page = adw::StatusPage::builder()
+        .icon_name("emblem-synchronizing-symbolic")
+        .title(t(locale, "install.progress"))
         .build();
-    vbox.append(&label);
 
-    let progress = gtk::ProgressBar::new();
-    progress.set_show_text(true);
+    let spinner = adw::SpinnerPaintable::new();
+    status_page.set_paintable(Some(&spinner));
+
     let stored = data.borrow().latest_progress.clone();
-    if let Some(p) = stored {
+    let mut desc = t(locale, "install.downloaded").to_string();
+    if let Some(ref p) = stored {
         if p.total_bytes > 0 {
-            let frac = p.downloaded_bytes as f64 / p.total_bytes as f64;
-            progress.set_fraction(frac.clamp(0.0, 1.0));
-            if p.stage == InstallStage::Done {
-                progress.set_fraction(1.0);
+            desc = format!("{} / {} bytes", p.downloaded_bytes, p.total_bytes);
+            if let Some(ref pb) = data.borrow().progress_bar {
+                let frac = p.downloaded_bytes as f64 / p.total_bytes as f64;
+                pb.set_fraction(frac.clamp(0.0, 1.0));
+                pb.set_visible(true);
             }
+        } else if let Some(ref pb) = data.borrow().progress_bar {
+            pb.set_pulse_step(0.05);
+            pb.pulse();
+            pb.set_visible(true);
         }
-    } else {
-        progress.set_pulse_step(0.05);
-        progress.pulse();
+        if p.stage == InstallStage::Done {
+            desc = t(locale, "install.progress").to_string();
+        }
     }
-    progress.set_margin_bottom(12);
-    vbox.append(&progress);
+    status_page.set_description(Some(&desc));
 
-    let log_buf = gtk::TextBuffer::new(None);
-    let log_view = gtk::TextView::builder()
-        .buffer(&log_buf)
-        .editable(false)
-        .wrap_mode(gtk::WrapMode::Word)
-        .height_request(200)
-        .width_request(500)
-        .build();
-    let log_scroll = gtk::ScrolledWindow::builder()
-        .child(&log_view)
-        .vexpand(true)
-        .hexpand(true)
-        .build();
-    vbox.append(&log_scroll);
-
-    parent.append(&vbox);
+    parent.append(&status_page);
 }
 
 fn render_done(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
     let locale = data.borrow().locale;
-    let app_name = data.borrow().manifest.as_ref().map(|m| m.name.clone());
-    let staged = data.borrow().staged_path.clone();
-    let _ = data;
 
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 16);
-    vbox.set_valign(gtk::Align::Center);
-    vbox.set_halign(gtk::Align::Center);
-    vbox.set_margin_top(48);
-
-    let icon = gtk::Image::from_icon_name("object-select-symbolic");
-    icon.set_pixel_size(64);
-    vbox.append(&icon);
-
-    let title = gtk::Label::builder()
-        .label(t(locale, "done.title"))
-        .css_classes(["title-1"])
+    let status_page = adw::StatusPage::builder()
+        .icon_name("object-select-symbolic")
+        .title(t(locale, "done.title"))
+        .description(t(locale, "done.success_install"))
         .build();
-    vbox.append(&title);
 
     let btn_box = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    btn_box.set_halign(gtk::Align::Center);
 
+    let app_name = data.borrow().manifest.as_ref().map(|m| m.name.clone());
+    let launch_name = app_name.unwrap_or_default();
     let launch_btn = gtk::Button::builder()
         .label(t(locale, "done.launch"))
-        .css_classes(["suggested-action"])
+        .css_classes(["suggested-action", "pill"])
         .build();
-    let name = app_name.clone().unwrap_or_default();
     launch_btn.connect_clicked(move |_| {
-        let safe_name = name.replace('/', "_");
+        let safe_name = launch_name.replace('/', "_");
         let _ = SysCommand::new(&safe_name).spawn();
     });
     btn_box.append(&launch_btn);
 
-    let open_btn = gtk::Button::builder()
-        .label(t(locale, "done.open_folder"))
-        .build();
-    let staged_clone = staged.clone();
-    open_btn.connect_clicked(move |_| {
-        if let Some(ref path) = staged_clone {
-            if let Some(parent) = path.parent() {
-                let _ = SysCommand::new("xdg-open")
-                    .arg(parent.to_str().unwrap_or("."))
-                    .spawn();
-            }
-        }
-    });
-    btn_box.append(&open_btn);
-
     let close_btn = gtk::Button::builder()
         .label(t(locale, "done.close"))
+        .css_classes(["pill"])
         .build();
     let data_close = Rc::clone(data);
     close_btn.connect_clicked(move |_| {
@@ -783,39 +802,22 @@ fn render_done(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
     });
     btn_box.append(&close_btn);
 
-    vbox.append(&btn_box);
-    parent.append(&vbox);
+    status_page.set_child(Some(&btn_box));
+    parent.append(&status_page);
 }
 
 fn render_error(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, message: String) {
     let locale = data.borrow().locale;
 
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 16);
-    vbox.set_valign(gtk::Align::Center);
-    vbox.set_halign(gtk::Align::Center);
-    vbox.set_margin_top(48);
-
-    let icon = gtk::Image::from_icon_name("dialog-error-symbolic");
-    icon.set_pixel_size(64);
-    vbox.append(&icon);
-
-    let title = gtk::Label::builder()
-        .label(t(locale, "error.title"))
-        .css_classes(["title-1"])
+    let status_page = adw::StatusPage::builder()
+        .icon_name("dialog-error-symbolic")
+        .title(t(locale, "error.title"))
+        .description(&message)
         .build();
-    vbox.append(&title);
-
-    let msg = gtk::Label::builder()
-        .label(&message)
-        .wrap(true)
-        .selectable(true)
-        .max_width_chars(60)
-        .build();
-    vbox.append(&msg);
 
     let close_btn = gtk::Button::builder()
         .label(t(locale, "error.close"))
-        .css_classes(["suggested-action"])
+        .css_classes(["pill"])
         .build();
     let data_close = Rc::clone(data);
     close_btn.connect_clicked(move |_| {
@@ -823,17 +825,9 @@ fn render_error(data: &Rc<RefCell<UiData>>, parent: &gtk::Box, message: String) 
             window.close();
         }
     });
-    vbox.append(&close_btn);
 
-    parent.append(&vbox);
-}
-
-fn add_detail_row(group: &adw::PreferencesGroup, title: &str, subtitle: &str) {
-    let row = adw::ActionRow::builder()
-        .title(title)
-        .subtitle(subtitle)
-        .build();
-    group.add(&row);
+    status_page.set_child(Some(&close_btn));
+    parent.append(&status_page);
 }
 
 fn clear_children(box_: &gtk::Box) {

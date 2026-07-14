@@ -82,6 +82,9 @@ fn en(key: &str) -> &str {
         "done.launch" => "Launch",
         "done.close" => "Close",
         "done.open_folder" => "Open Folder",
+        "done.success_install" => "Application installed successfully",
+        "done.success_update" => "Application updated successfully",
+        "done.success_remove" => "Application removed successfully",
         "error.title" => "Error",
         "error.close" => "Close",
         "verify.sha256_ok" => "SHA256: OK",
@@ -89,6 +92,18 @@ fn en(key: &str) -> &str {
         "verify.signature_ok" => "Signature: Valid",
         "verify.signature_invalid" => "Signature: Invalid",
         "verify.signature_missing" => "Signature: Not provided",
+        "menu.verify" => "Verify",
+        "menu.rollback" => "Rollback",
+        "menu.reload" => "Reload",
+        "menu.cache_info" => "Cache Info",
+        "menu.history" => "History",
+        "menu.about" => "About",
+        "status.details" => "Details",
+        "status.security" => "Security",
+        "status.status" => "Status",
+        "toast.verified" => "Verification complete",
+        "toast.cache_cleared" => "Cache info shown",
+        "toast.history_shown" => "History shown",
         _ => key,
     }
 }
@@ -187,6 +202,9 @@ mod tests {
             "done.launch",
             "done.close",
             "done.open_folder",
+            "done.success_install",
+            "done.success_update",
+            "done.success_remove",
             "error.title",
             "error.close",
             "verify.sha256_ok",
@@ -194,6 +212,18 @@ mod tests {
             "verify.signature_ok",
             "verify.signature_invalid",
             "verify.signature_missing",
+            "menu.verify",
+            "menu.rollback",
+            "menu.reload",
+            "menu.cache_info",
+            "menu.history",
+            "menu.about",
+            "status.details",
+            "status.security",
+            "status.status",
+            "toast.verified",
+            "toast.cache_cleared",
+            "toast.history_shown",
         ];
         for key in keys {
             let value = t(Locale::En, key);
@@ -211,8 +241,6 @@ mod tests {
 
     #[test]
     fn russian_falls_back_to_english_for_missing() {
-        // There's no English-only key that doesn't have Russian,
-        // but we can test a non-existent key falls through to English
         let result = t(Locale::Ru, "nonexistent.key");
         assert_eq!(result, "nonexistent.key");
     }
@@ -277,6 +305,9 @@ fn ru(key: &str) -> Option<&str> {
         "done.launch" => Some("Запустить"),
         "done.close" => Some("Закрыть"),
         "done.open_folder" => Some("Открыть папку"),
+        "done.success_install" => Some("Приложение успешно установлено"),
+        "done.success_update" => Some("Приложение успешно обновлено"),
+        "done.success_remove" => Some("Приложение успешно удалено"),
         "error.title" => Some("Ошибка"),
         "error.close" => Some("Закрыть"),
         "verify.sha256_ok" => Some("SHA256: OK"),
@@ -284,6 +315,18 @@ fn ru(key: &str) -> Option<&str> {
         "verify.signature_ok" => Some("Подпись: действительна"),
         "verify.signature_invalid" => Some("Подпись: недействительна"),
         "verify.signature_missing" => Some("Подпись: не предоставлена"),
+        "menu.verify" => Some("Проверить"),
+        "menu.rollback" => Some("Откатить"),
+        "menu.reload" => Some("Обновить"),
+        "menu.cache_info" => Some("Кэш"),
+        "menu.history" => Some("История"),
+        "menu.about" => Some("О приложении"),
+        "status.details" => Some("Подробности"),
+        "status.security" => Some("Безопасность"),
+        "status.status" => Some("Статус"),
+        "toast.verified" => Some("Проверка завершена"),
+        "toast.cache_cleared" => Some("Информация о кэше"),
+        "toast.history_shown" => Some("История показана"),
         _ => None,
     }
 }
