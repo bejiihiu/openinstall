@@ -5,7 +5,6 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
-use gio::prelude::ApplicationExtManual;
 use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
@@ -50,7 +49,7 @@ enum Page {
 pub fn run(args: Vec<String>) {
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
-        .flags(gio::ApplicationFlags::HANDLES_OPEN)
+        .flags(adw::gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
     application.connect_activate(move |app| {
