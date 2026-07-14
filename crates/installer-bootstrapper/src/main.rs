@@ -105,19 +105,7 @@ fn which(name: &str) -> Result<PathBuf, ()> {
     for dir in env::split_paths(&path) {
         let candidate = dir.join(name);
         if candidate.is_file() {
-            #[cfg(windows)]
-            {
-                let exts = env::var_os("PATHEXT").unwrap_or_default();
-                for ext in exts.to_string_lossy().split(';') {
-                    let with_ext = format!("{name}{ext}");
-                    if dir.join(&with_ext).is_file() {
-                        return Ok(dir.join(with_ext));
-                    }
-                }
-            }
-            if candidate.is_file() {
-                return Ok(candidate);
-            }
+            return Ok(candidate);
         }
     }
     Err(())
