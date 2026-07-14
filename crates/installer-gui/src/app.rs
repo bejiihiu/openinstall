@@ -12,7 +12,7 @@ use installer_core::{
     Environment, InstallProgress, InstallStage, InstallationState, Manifest, VerificationOutcome,
 };
 
-use installer_gui::i18n::{t, Locale};
+use crate::i18n::{t, Locale};
 
 type RefreshFn = Rc<RefCell<Option<Box<dyn Fn()>>>>;
 
