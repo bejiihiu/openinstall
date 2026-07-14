@@ -1298,8 +1298,26 @@ fn remove_desktop_entry(manifest: &Manifest) {
 }
 
 fn remove_appimage_binaries(manifest: &Manifest) -> String {
-    let bin_dir = local_bin_dir();
     let slug = slugify(&manifest.name);
+
+    // Read the desktop file to find the exact installed binary path
+    if let Some(home) = std::env::var_os("HOME") {
+        let desktop = PathBuf::from(home)
+            .join(".local/share/applications")
+            .join(format!("{}.desktop", slug));
+        if let Ok(content) = fs::read_to_string(&desktop) {
+            for line in content.lines() {
+                if let Some(exec) = line.strip_prefix("Exec=") {
+                    let exec_path = exec.split(' ').next().unwrap_or(exec);
+                    let _ = fs::remove_file(exec_path);
+                    return exec_path.to_string();
+                }
+            }
+        }
+    }
+
+    // Fallback: guess by filename matching
+    let bin_dir = local_bin_dir();
     if let Ok(entries) = fs::read_dir(&bin_dir) {
         for entry in entries.flatten() {
             let name = entry.file_name();
