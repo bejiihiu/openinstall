@@ -24,7 +24,7 @@ If *I* sometimes have to pause and think — what the hell must someone feel who
 
 ---
 
-Here's the funniest part. Ask any experienced Linux user how to install something. They'll probably answer immediately. But ask ten experienced Linux users and you'll get ten different answers.
+Ask any experienced Linux user how to install something. They'll probably answer immediately. But ask ten experienced Linux users and you'll get ten different answers.
 
 One will say use the repository. Another — Flatpak. A third will say Flatpak is evil and you should build from source. A fourth will send you to AUR. A fifth will drop a command that stopped working a year and a half ago.
 
