@@ -855,10 +855,8 @@ dependencies = [
 name = "installer-cli"
 version = "0.1.0"
 dependencies = [
- "glib",
- "gtk4",
  "installer-core",
- "libadwaita",
+ "installer-gui",
  "reqwest",
  "serde_json",
 ]

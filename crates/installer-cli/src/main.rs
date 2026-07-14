@@ -9,7 +9,7 @@ use installer_core::{
 };
 
 #[cfg(all(feature = "gui", target_os = "linux"))]
-mod gui;
+use installer_gui;
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1)) {
@@ -469,7 +469,7 @@ fn gui_command(args: impl Iterator<Item = String>) -> Result<(), String> {
     if args.iter().any(|a| a == "--register-desktop") {
         return register_gui_desktop();
     }
-    crate::gui::app::run();
+    installer_gui::app::run();
     Ok(())
 }
 
