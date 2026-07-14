@@ -76,15 +76,19 @@ Chaining: **locate → fix → verify.** Investigator finds sites, builder edits
 ### Worktree flow
 
 ```bash
-# create worktree for agent
-git worktree add ../openinstall-<branch> -b <branch>
+# create worktree — use descriptive names, not agent/opencode/xxx templates
+git worktree add ../openinstall-fix-cache-crash -b fix/cache-crash
+git worktree add ../openinstall-feat-snap-support -b feat/snap-support
+git worktree add ../openinstall-chore-deps-update -b chore/deps-update
 
 # agent works in its worktree, commits there
 
 # main thread merges after review
-git merge <branch>
-git worktree remove ../openinstall-<branch>
+git merge fix/cache-crash
+git worktree remove ../openinstall-fix-cache-crash
 ```
+
+**Naming convention:** `<type>/<short-desc>` — `fix/`, `feat/`, `chore/`, `refactor/`, `docs/`. No `agent`, `opencode`, `wip`, `test` prefixes. The worktree directory mirrors the branch: `../openinstall-<branch>`.
 
 ### Main thread = team lead
 
@@ -97,6 +101,25 @@ Main agent does NOT write code. Its job:
 5. **Push** — push to GitHub
 6. **Monitor** — watch CI workflow, fix if broken
 7. **Version bump** — update version in `Cargo.toml` workspace, `openinstall.json`, and any other references before release
+
+### CI tags
+
+Put these in commit messages to control CI behavior:
+
+| Tag | Effect |
+|---|---|
+| `[ci skip]` or `[ci ignore]` | Skip CI entirely (docs-only changes, typo fixes) |
+| `[ci beta]` | Create a pre-release from current version. Tag must be on `main`. Description includes beta warning. |
+| `[ci release]` | Create a full release. Tag must be on `main`. Include release notes in the commit message after the tag. |
+
+Examples:
+```
+fix: resolve cache race condition [ci skip]
+feat: add snap package support [ci beta]
+release: v0.2.0 — snap support, improved GUI [ci release]
+```
+
+**Tag placement:** append at the end of the commit message subject or body. One tag per commit.
 
 ## When unsure — search the web
 

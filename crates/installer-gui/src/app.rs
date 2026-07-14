@@ -64,7 +64,7 @@ pub fn run(args: Vec<String>) {
         .build();
 
     application.connect_activate(move |app| {
-        eprintln!("[gui] connect_activate called");
+        eprintln!("[gui] connect_activate called, args={:?}", args);
         let locale = Locale::detect();
         let manifest_path = args.first().map(PathBuf::from);
         eprintln!("[gui] manifest_path={:?}", manifest_path);
@@ -139,7 +139,7 @@ pub fn run(args: Vec<String>) {
         }
     });
 
-    application.run();
+    application.run(&[]);
 }
 
 fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
