@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
+use gio::prelude::*;
 use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
@@ -199,7 +200,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     );
     menu.append_section(None, &section3);
 
-    let menu_button = adw::MenuButton::builder()
+    let menu_button = gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
         .menu_model(&menu)
         .build();
@@ -333,7 +334,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
             .unwrap_or_else(|e| e.to_string());
         if let Some(ref ov) = data_ci.borrow().toast_overlay {
             let toast = adw::Toast::new(&result);
-            ov.add_toast(&toast);
+            ov.add_toast(toast);
         }
     });
     action_group.add_action(&action);
@@ -366,7 +367,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
             .unwrap_or_else(|e| e.to_string());
         if let Some(ref ov) = data_h.borrow().toast_overlay {
             let toast = adw::Toast::new(&result);
-            ov.add_toast(&toast);
+            ov.add_toast(toast);
         }
     });
     action_group.add_action(&action);
@@ -403,7 +404,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
                     Ok(outcome) => {
                         if let Some(ref ov) = d.toast_overlay {
                             let toast = adw::Toast::new(t(d.locale, "toast.verified"));
-                            ov.add_toast(&toast);
+                            ov.add_toast(toast);
                         }
                         d.verification = Some(outcome);
                     }
@@ -483,8 +484,8 @@ fn render_manifest(
     {
         let banner = adw::Banner::builder()
             .title(t(locale, "manifest.signature_warning"))
-            .banner_style(adw::BannerStyle::Danger)
             .build();
+        banner.set_css_classes(&["destructive"]);
         content.append(&banner);
     }
 
@@ -739,8 +740,11 @@ fn render_installing(data: &Rc<RefCell<UiData>>, parent: &gtk::Box) {
         .title(t(locale, "install.progress"))
         .build();
 
-    let spinner = adw::SpinnerPaintable::new();
-    status_page.set_paintable(Some(&spinner));
+    let spinner = gtk::Spinner::new();
+    spinner.set_size_request(48, 48);
+    spinner.set_visible(true);
+    spinner.start();
+    status_page.set_child(Some(&spinner));
 
     let stored = data.borrow().latest_progress.clone();
     let mut desc = t(locale, "install.downloaded").to_string();
