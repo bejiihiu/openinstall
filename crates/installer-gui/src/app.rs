@@ -106,7 +106,7 @@ pub fn run(args: Vec<String>) {
         let installer = Installer::default();
 
         let manifest_path = args.first().map(PathBuf::from);
-        let (manifest, _load_error) = match manifest_path.as_ref() {
+        let (manifest, _load_error): (Option<Manifest>, Option<String>) = match manifest_path.as_ref() {
             Some(path) => match Manifest::from_path(path) {
                 Ok(m) => (Some(m), None),
                 Err(_) => (Some(demo_manifest()), None),
