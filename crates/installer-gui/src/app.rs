@@ -247,7 +247,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     }));
 
     let action_group = adw::gio::SimpleActionGroup::new();
-    window.add_action_group("app", &action_group);
+    window.insert_action_group("app", Some(&action_group));
 
     let data_v = Rc::clone(&data);
     let tx_v = tx.clone();
