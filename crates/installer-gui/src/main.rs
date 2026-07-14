@@ -2,6 +2,9 @@
 mod app;
 
 #[cfg(target_os = "linux")]
+mod i18n;
+
+#[cfg(target_os = "linux")]
 fn main() {
     app::run();
 }
