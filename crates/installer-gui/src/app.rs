@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
+use gio::prelude::ApplicationExtManual;
 use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
@@ -49,6 +50,7 @@ enum Page {
 pub fn run(args: Vec<String>) {
     let application = adw::Application::builder()
         .application_id("io.openinstall.installer")
+        .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
 
     application.connect_activate(move |app| {
@@ -84,6 +86,44 @@ pub fn run(args: Vec<String>) {
         }));
 
         build_window(app, data);
+    });
+
+    application.connect_open(move |_app, files, _hint| {
+        if let Some(file) = files.first() {
+            if let Some(path) = file.path() {
+                let path_str = path.to_string_lossy().to_string();
+                let manifest_path = PathBuf::from(path_str);
+                let environment = Environment::detect();
+                let installer = Installer::default();
+                let locale = Locale::detect();
+
+                let (manifest, _load_error) = match Manifest::from_path(&manifest_path) {
+                    Ok(m) => (Some(m), None),
+                    Err(e) => (None, Some(e.to_string())),
+                };
+
+                let install_state = manifest
+                    .as_ref()
+                    .and_then(|m| installer.inspect(m, &environment).ok());
+
+                let data = Rc::new(RefCell::new(UiData {
+                    locale,
+                    manifest,
+                    manifest_path: Some(manifest_path),
+                    environment,
+                    installer,
+                    window: None,
+                    page: Page::Manifest,
+                    verification: None,
+                    install_state,
+                    staged_path: None,
+                    latest_progress: None,
+                }));
+
+                let app = _app.clone();
+                build_window(&app, data);
+            }
+        }
     });
 
     application.run();
