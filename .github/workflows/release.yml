@@ -46,3 +46,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
+
+  post-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Annotate release if beta
+        if: contains(github.event.release.tag_name, 'beta')
+        run: |
+          gh release edit "${{ github.event.release.tag_name }}" \
+            --notes "$(gh release view '${{ github.event.release.tag_name }}' --json body -q .body)
+
+---
+
+⚠️ **This is a beta/pre-release.** It may contain bugs or incomplete features.
+Use in production at your own risk. Report issues at https://github.com/${{ github.repository }}/issues" \
+            --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

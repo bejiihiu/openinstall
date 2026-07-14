@@ -41,6 +41,8 @@ cargo fmt --check
 - **GUI is Linux-only.** `installer-gui` depends on `gtk4` and `libadwaita` behind `cfg(target_os = "linux")`. It compiles on non-Linux but is a stub. Do not write GUI code assuming it runs anywhere but Linux.
 - **aarch64 release builds are CLI-only.** The release workflow builds aarch64 with `--no-default-features` (no GUI) because cross-compiling GTK4 is not supported.
 - **`/etc/os-release` detection.** The core reads this file to identify the distro. Tests may need to mock this or run on real Linux.
+- **Tests are Linux-only.** `cargo test` calls `Environment::detect()` which reads `/etc/os-release`. On Windows/macOS tests will fail or return `PackageManager::Unknown`. CI runs on `ubuntu-latest`.
+- **`cargo run` needs `-p`.** Run with `cargo run -p installer-cli -- <args>`, not bare `cargo run`.
 - **Package manager adapters are small.** Each adapter (~20 lines) implements install/remove/upgrade for one package manager. Pattern is in `crates/installer-core/src/adapters/`.
 - **Blocking HTTP.** Uses `reqwest` with `blocking` feature — not async. All network calls are synchronous.
 - **Ed25519 signatures via `ring`.** Signature verification in `crates/installer-core/src/signature.rs`.

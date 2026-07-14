@@ -6,7 +6,36 @@ on:
     branches: [main]
 
 jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+      release: ${{ steps.check.outputs.release }}
+      beta: ${{ steps.check.outputs.beta }}
+    steps:
+      - id: check
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          if echo "$MSG" | grep -qiE '\[(ci\s*skip|ci\s*ignore)\]'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping CI — commit message contains [ci skip] or [ci ignore]"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$MSG" | grep -qiE '\[ci\s*release\]'; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$MSG" | grep -qiE '\[ci\s*beta\]'; then
+            echo "beta=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "beta=false" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,3 +52,65 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
       - name: cargo fmt
         run: cargo fmt --check
+
+  create-release:
+    needs: [check-skip, test]
+    if: |
+      needs.check-skip.outputs.skip != 'true' &&
+      (needs.check-skip.outputs.release == 'true' || needs.check-skip.outputs.beta == 'true') &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Extract commit message body
+        id: body
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          # strip the tag markers to get the clean notes
+          NOTES=$(echo "$MSG" | sed -E 's/\[(ci\s*(release|beta))\]//gi' | sed '/^[[:space:]]*$/d' | sed '/^$/d' || true)
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          IS_BETA="${{ needs.check-skip.outputs.beta }}"
+          NOTES="${{ steps.body.outputs.notes }}"
+
+          if [ "$IS_BETA" = "true" ]; then
+            TAG="v${VERSION}-beta"
+            TITLE="v${VERSION} (beta)"
+            if [ -z "$NOTES" ]; then
+              NOTES="⚠️ **This is a beta/pre-release.** It may contain bugs. Do not use in production."
+            else
+              NOTES="${NOTES}
+
+---
+
+⚠️ **This is a beta/pre-release.** It may contain bugs. Do not use in production."
+            fi
+            gh release create "$TAG" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --prerelease \
+              --target main
+          else
+            TAG="v${VERSION}"
+            TITLE="v${VERSION}"
+            if [ -z "$NOTES" ]; then
+              NOTES="Release ${VERSION}"
+            fi
+            gh release create "$TAG" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --target main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
