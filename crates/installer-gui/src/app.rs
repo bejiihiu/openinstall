@@ -13,6 +13,7 @@ use installer_core::{
 };
 
 use crate::i18n::{t, Locale};
+use crate::settings::{AppSettings, LocalePreference, ThemePreference};
 
 type RefreshFn = Rc<RefCell<Option<Box<dyn Fn()>>>>;
 
@@ -26,6 +27,7 @@ enum ProgressUpdate {
 
 struct UiData {
     locale: Locale,
+    settings: AppSettings,
     manifest: Option<Manifest>,
     manifest_path: Option<PathBuf>,
     environment: Environment,
@@ -67,10 +69,15 @@ pub fn run(args: Vec<String>) {
     let args_activate = args.clone();
     let args_open = args;
     application.connect_activate(move |app| {
-        let locale = Locale::detect();
+        let settings = AppSettings::load();
+        let locale = settings.resolve_locale();
         let manifest_path = args_activate.first().map(PathBuf::from);
         let environment = Environment::detect();
-        let installer = Installer::default();
+        let installer = if settings.cache_dir.is_empty() {
+            Installer::default()
+        } else {
+            Installer::new(std::path::PathBuf::from(&settings.cache_dir))
+        };
 
         let (manifest, _load_error) = match manifest_path.as_ref() {
             Some(path) => match Manifest::from_path(path) {
@@ -86,6 +93,7 @@ pub fn run(args: Vec<String>) {
 
         let data = Rc::new(RefCell::new(UiData {
             locale,
+            settings,
             manifest,
             manifest_path,
             environment,
@@ -104,9 +112,14 @@ pub fn run(args: Vec<String>) {
     });
 
     application.connect_open(move |_app, _files, _hint| {
-        let locale = Locale::detect();
+        let settings = AppSettings::load();
+        let locale = settings.resolve_locale();
         let environment = Environment::detect();
-        let installer = Installer::default();
+        let installer = if settings.cache_dir.is_empty() {
+            Installer::default()
+        } else {
+            Installer::new(std::path::PathBuf::from(&settings.cache_dir))
+        };
 
         let manifest_path = args_open.first().map(PathBuf::from);
         let (manifest, _load_error): (Option<Manifest>, Option<String>) =
@@ -124,6 +137,7 @@ pub fn run(args: Vec<String>) {
 
         let data = Rc::new(RefCell::new(UiData {
             locale,
+            settings,
             manifest,
             manifest_path,
             environment,
@@ -146,11 +160,14 @@ pub fn run(args: Vec<String>) {
 }
 
 fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
+    let settings = data.borrow().settings.clone();
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .default_width(600)
-        .default_height(600)
+        .default_width(settings.window_width)
+        .default_height(settings.window_height)
         .build();
+
+    apply_theme(&settings);
 
     let toast_overlay = adw::ToastOverlay::new();
 
@@ -193,6 +210,10 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     menu.append_section(None, &section2);
 
     let section3 = adw::gio::Menu::new();
+    section3.append(
+        Some(&t(data.borrow().locale, "menu.preferences")),
+        Some("app.preferences"),
+    );
     section3.append(
         Some(&t(data.borrow().locale, "menu.about")),
         Some("app.about"),
@@ -371,6 +392,17 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     });
     action_group.add_action(&action);
 
+    let data_prefs = Rc::clone(&data);
+    let window_prefs = window.clone();
+    let action = adw::gio::SimpleAction::new("preferences", None);
+    action.connect_activate(move |_, _| {
+        let locale = data_prefs.borrow().locale;
+        let settings = data_prefs.borrow().settings.clone();
+        let prefs_window = build_preferences_window(&window_prefs, locale, settings, &data_prefs);
+        prefs_window.present(Some(&window_prefs));
+    });
+    action_group.add_action(&action);
+
     let window_clone = window.clone();
     let action = adw::gio::SimpleAction::new("about", None);
     action.connect_activate(move |_, _| {
@@ -380,7 +412,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
             .version(env!("CARGO_PKG_VERSION"))
             .developer_name("OpenInstall Contributors")
             .developers(vec!["OpenInstall Contributors".to_string()])
-            .copyright("© 2025 OpenInstall Contributors")
+            .copyright("© 2026 OpenInstall Contributors")
             .license_type(gtk::License::MitX11)
             .website("https://github.com/bejiihiu/openinstall")
             .issue_url("https://github.com/bejiihiu/openinstall/issues")
@@ -837,6 +869,185 @@ fn clear_children(box_: &gtk::Box) {
     while let Some(child) = box_.first_child() {
         box_.remove(&child);
     }
+}
+
+fn apply_theme(settings: &AppSettings) {
+    let style_manager = adw::StyleManager::default();
+    match settings.theme {
+        ThemePreference::System => {
+            style_manager.set_color_scheme(adw::ColorScheme::Default);
+        }
+        ThemePreference::Light => {
+            style_manager.set_color_scheme(adw::ColorScheme::ForceLight);
+        }
+        ThemePreference::Dark => {
+            style_manager.set_color_scheme(adw::ColorScheme::ForceDark);
+        }
+    }
+}
+
+fn build_preferences_window(
+    parent: &adw::ApplicationWindow,
+    locale: Locale,
+    settings: AppSettings,
+    data: &Rc<RefCell<UiData>>,
+) -> adw::PreferencesWindow {
+    let prefs = adw::PreferencesWindow::builder()
+        .transient_for(parent)
+        .modal(true)
+        .title(t(locale, "settings.title"))
+        .default_width(500)
+        .default_height(400)
+        .build();
+
+    let page = adw::PreferencesPage::new();
+    page.add(&build_interface_group(locale, &settings, data));
+    page.add(&build_advanced_group(locale, &settings, data));
+    prefs.add(&page);
+
+    prefs
+}
+
+fn build_interface_group(
+    locale: Locale,
+    settings: &AppSettings,
+    data: &Rc<RefCell<UiData>>,
+) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title(t(locale, "settings.interface"))
+        .build();
+
+    let language_row = adw::ComboRow::builder()
+        .title(t(locale, "settings.language"))
+        .build();
+
+    let language_model = adw::StringList::new(&[
+        t(locale, "locale.auto"),
+        t(locale, "locale.en"),
+        t(locale, "locale.ru"),
+    ]);
+    language_row.set_model(Some(&language_model));
+
+    let current_lang = match settings.locale {
+        LocalePreference::Auto => 0,
+        LocalePreference::En => 1,
+        LocalePreference::Ru => 2,
+    };
+    language_row.set_selected(current_lang);
+
+    let data_lang = Rc::clone(data);
+    let settings_lang = settings.clone();
+    language_row.connect_selected_notify(move |row| {
+        let mut s = settings_lang.clone();
+        s.locale = match row.selected() {
+            0 => LocalePreference::Auto,
+            1 => LocalePreference::En,
+            2 => LocalePreference::Ru,
+            _ => LocalePreference::Auto,
+        };
+        let _ = s.save();
+        data_lang.borrow_mut().locale = s.resolve_locale();
+        data_lang.borrow_mut().settings = s;
+    });
+    group.add(&language_row);
+
+    let theme_row = adw::ComboRow::builder()
+        .title(t(locale, "settings.theme"))
+        .build();
+
+    let theme_model = adw::StringList::new(&[
+        t(locale, "theme.system"),
+        t(locale, "theme.light"),
+        t(locale, "theme.dark"),
+    ]);
+    theme_row.set_model(Some(&theme_model));
+
+    let current_theme = match settings.theme {
+        ThemePreference::System => 0,
+        ThemePreference::Light => 1,
+        ThemePreference::Dark => 2,
+    };
+    theme_row.set_selected(current_theme);
+
+    let settings_theme = settings.clone();
+    theme_row.connect_selected_notify(move |row| {
+        let mut s = settings_theme.clone();
+        s.theme = match row.selected() {
+            0 => ThemePreference::System,
+            1 => ThemePreference::Light,
+            2 => ThemePreference::Dark,
+            _ => ThemePreference::System,
+        };
+        apply_theme(&s);
+        let _ = s.save();
+    });
+    group.add(&theme_row);
+
+    group
+}
+
+fn build_advanced_group(
+    locale: Locale,
+    settings: &AppSettings,
+    data: &Rc<RefCell<UiData>>,
+) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title(t(locale, "settings.advanced"))
+        .build();
+
+    let cache_row = adw::ActionRow::builder()
+        .title(t(locale, "settings.cache_dir"))
+        .subtitle(&settings.cache_dir)
+        .activatable(true)
+        .build();
+
+    let data_cache = Rc::clone(data);
+    let settings_cache = settings.clone();
+    cache_row.connect_activated(move |row| {
+        let dialog = gtk::FileDialog::builder()
+            .title(t(locale, "settings.cache_dir"))
+            .build();
+
+        let row = row.clone();
+        let data_c = Rc::clone(&data_cache);
+        let settings_c = settings_cache.clone();
+        dialog.select_folder(Some(&row), None::<&gtk::gio::Cancellable>, move |result| {
+            if let Ok(file) = result {
+                if let Some(path) = file.path() {
+                    let mut s = settings_c.clone();
+                    s.cache_dir = path.to_string_lossy().to_string();
+                    let _ = s.save();
+                    row.set_subtitle(&s.cache_dir);
+                    data_c.borrow_mut().settings = s;
+                }
+            }
+        });
+    });
+    group.add(&cache_row);
+
+    let timeout_row = adw::SpinRow::builder()
+        .title(t(locale, "settings.download_timeout"))
+        .adjustment(
+            &gtk::Adjustment::new(
+                settings.download_timeout as f64,
+                10.0,
+                600.0,
+                10.0,
+                10.0,
+                0.0,
+            ),
+        )
+        .build();
+
+    let settings_timeout = settings.clone();
+    timeout_row.connect_notify(Some("value"), move |row| {
+        let mut s = settings_timeout.clone();
+        s.download_timeout = row.value() as u64;
+        let _ = s.save();
+    });
+    group.add(&timeout_row);
+
+    group
 }
 
 fn demo_manifest() -> Manifest {
