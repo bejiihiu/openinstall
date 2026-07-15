@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/github/stars/bejiihiu/openinstall">
   <img src="https://img.shields.io/github/v/release/bejiihiu/openinstall">
   <img src="https://img.shields.io/badge/Linux-only-blue">
+  <a href="https://github.com/bejiihiu/openinstall/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/contributions-welcome-brightgreen"></a>
 </p>
 
 A Linux app installer that works across distros. One CLI, one GUI — apt, dnf, pacman, zypper, all the same way.
@@ -207,6 +208,34 @@ The GUI requires GTK4 and libadwaita development headers (`libgtk-4-dev` and `li
 ## What this isn't
 
 It's not a new package manager. It's not a container runtime. It's not an app store. It's a frontend that reads a JSON file, downloads stuff, checks signatures, and calls your system's package manager. Nothing more.
+
+## Contributing
+
+We'd love your help. Here's how to get started:
+
+1. **Easy entry** — look for [`good first issue`](https://github.com/bejiihiu/openinstall/labels/good%20first%20issue) labels. Adding a new package manager adapter is ~20 lines.
+2. **Read the guide** — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, code style, and PR process.
+3. **Report bugs** — use the [bug report template](https://github.com/bejiihiu/openinstall/issues/new?template=bug_report.yml).
+4. **Request features** — use the [feature request template](https://github.com/bejiihiu/openinstall/issues/new?template=feature_request.yml).
+
+Even small PRs help — fix a typo, improve an error message, add a test. Every contribution counts.
+
+## Roadmap
+
+- [x] Cross-distro CLI installer (apt, pacman, dnf, zypper, pkcon)
+- [x] Manifest format with SHA256 + ed25519 signatures
+- [x] GTK4 + libadwaita GUI
+- [x] URI handler (`openinstall://` links)
+- [x] Self-update mechanism
+- [ ] Snap adapter
+- [ ] Nix adapter
+- [ ] Flatpak adapter (as install source)
+- [ ] Batch install (multiple manifests)
+- [ ] Offline install support
+- [ ] Shell completion (bash, zsh, fish)
+- [ ] Man page
+
+See [open issues](https://github.com/bejiihiu/openinstall/issues) for what's being worked on. Pick something from the roadmap and claim it — open an issue so others know it's taken.
 
 ## License
 

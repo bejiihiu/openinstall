@@ -150,3 +150,45 @@ Rules:
 - **No boilerplate.** No "for later" scaffolding.
 
 Pattern: `[code] → skipped: [X], add when [Y].`
+
+## Code organization
+
+- **Reuse before rewrite.** Grep before writing. If a helper, type, pattern already exists in this codebase — use it. Duplicate code is a bug.
+- **No god files.** If a file is >200 lines, split it. Single responsibility per file.
+- **No god classes/structs.** If a struct has 10+ fields or methods, it's doing too much. Extract.
+- **Separate concerns.** One file = one job. Types in `types.rs`, errors in `errors.rs`, constants in `constants.rs`, utils in `utils.rs`.
+- **Interfaces (traits) over concrete types.** Define a trait, implement it per package manager / per backend. Swap without rewriting callers.
+- **Enums for variants.** Use `enum` + `match` over string comparisons, `if-else` chains, or magic constants.
+- **i18n for user-facing strings.** All user-visible text goes through i18n — don't hardcode English strings in logic.
+- **Constants over magic values.** Named `const` for numbers, paths, URLs. Never `5` or `"/tmp"` in code.
+- **Small functions.** Do one thing, name it, return. If a function is >50 lines, split.
+- **No hardcoding.** Config, paths, URLs, timeouts — all configurable or const, never inline literals.
+- **Deps = debt.** Don't add a crate for 3 lines of code. Stdlib or a small function wins.
+
+## Error handling
+
+- **Core errors = `thiserror` enum.** `InstallerError`, `ManifestError`, `SignatureError` — add new variants to existing enums, no new error types for one-off cases.
+- **CLI errors = `String`.** `.map_err(|e| e.to_string())` at the boundary. Don't leak internal error types to user output.
+- **`?` over unwrap/expect.** Except in tests and one-shot scripts.
+- **No swallowed errors.** If you catch it, either propagate or log — never silently drop.
+
+## Naming
+
+- **`snake_case` everything** except types (`PascalCase`) and constants (`SCREAMING_SNAKE`).
+- **No abbreviations.** `pkg` → `package`, `cfg` → `config`, `mgr` → `manager`. Except stdlib conventions (`fs`, `io`, `env`).
+- **Verbs for functions, nouns for types/structs.** `install_package()` not `installer()`. `PackageManager` not `ManagingPackages`.
+- **Boolean fields/params end with `is_`, `has_`, `can_`, `should_`.** `is_installed`, `has_updates`.
+
+## Comments
+
+- **Code explains itself.** If you need a comment to explain *what* — rename the function/variable.
+- **Comments explain *why*.** "We check X here because Y breaks if Z" — yes. "// this loops through the list" — no.
+- **`// ponytail:` marks deliberate shortcuts.** Short explanation + upgrade path.
+- **No TODO hoarding.** If it's not tracked in an issue, delete the TODO. TODOs without issues rot.
+
+## Testing
+
+- **Inline tests only.** `#[cfg(test)] mod tests` at the bottom of the file. No separate `tests/` dirs.
+- **Test the edge cases, not the happy path.** Empty input, permission denied, network timeout — that's where bugs live.
+- **No test interdependence.** Each test runs standalone. No shared mutable state between tests.
+- **Filesystem tests use temp dirs.** `std::env::temp_dir()` + `openinstall-test-` prefix. Clean up in the test.

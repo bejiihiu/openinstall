@@ -1,0 +1,83 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Fill in the details below so we can reproduce it.
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distro
+      description: Which Linux distro and version?
+      placeholder: "e.g. Ubuntu 24.04, Arch Linux, Fedora 40"
+    validations:
+      required: true
+
+  - type: input
+    id: arch
+    attributes:
+      label: Architecture
+      description: CPU architecture
+      placeholder: "x86_64 or aarch64"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenInstall version
+      description: Output of `installer --version` or commit hash
+      placeholder: "e.g. 0.1.0 or commit abc1234"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command that failed
+      description: What did you run?
+      render: bash
+      placeholder: |
+        installer install https://example.com/app.json
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: Paste the full error message
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to hit the bug
+      placeholder: |
+        1. Run `installer detect`
+        2. Run `installer install <manifest>`
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Anything else? (logs, screenshots, related issues)
+    validations:
+      required: false

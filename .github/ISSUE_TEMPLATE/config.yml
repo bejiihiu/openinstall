@@ -1,4 +1,4 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: Telegram
     url: https://t.me/devfolia
@@ -6,3 +6,6 @@ contact_links:
   - name: Security issue
     url: https://github.com/bejiihiu/openinstall/security/advisories/new
     about: Please do not file a public issue for security vulnerabilities.
+  - name: Good First Issues
+    url: https://github.com/bejiihiu/openinstall/labels/good%20first%20issue
+    about: Start here if you're new to the project

@@ -1,10 +1,14 @@
-## Related issue
+## What
 
-Fixes # (if applicable)
+Brief description of the change.
 
-## Description
+## Why
 
-What does this PR do? Why is it needed?
+What problem does this solve? Link to issue if applicable.
+
+## How
+
+Implementation notes (if non-obvious).
 
 ## Type of change
 
@@ -15,12 +19,11 @@ What does this PR do? Why is it needed?
 
 ## Checklist
 
-- [ ] The code compiles without errors (`cargo check`)
-- [ ] Tests pass (`cargo test`)
-- [ ] No new clippy warnings (`cargo clippy`)
-- [ ] Tests added for new code (if applicable)
-- [ ] Documentation updated (if needed)
+- [ ] `cargo clippy --workspace -- -D warnings` passes
+- [ ] `cargo fmt --check` passes
+- [ ] Tests added/updated
+- [ ] No new dependencies added (or justified below)
 
-## Screenshots / Logs (if applicable)
+## New dependencies (if any)
 
-## Additional context
+<!-- Why is this crate needed? What does stdlib or existing deps miss? -->
