@@ -1,4 +1,4 @@
-import { Button } from "@/components/Button";
+import Button from "@/components/Button";
 import { CopyCommand } from "@/components/CopyCommand";
 
 export default function Home() {

@@ -6,6 +6,7 @@ interface InputProps {
   name?: string;
   required?: boolean;
   disabled?: boolean;
+  minLength?: number;
 }
 
 export default function Input({
@@ -16,6 +17,7 @@ export default function Input({
   name,
   required = false,
   disabled = false,
+  minLength,
 }: InputProps) {
   return (
     <input
@@ -26,6 +28,7 @@ export default function Input({
       name={name}
       required={required}
       disabled={disabled}
+      minLength={minLength}
       className="w-full outline-none transition-all duration-200"
       style={{
         backgroundColor: "#FFFFFF",
