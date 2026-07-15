@@ -10,10 +10,12 @@ const inter = Inter({
   weight: ["300", "400", "500", "600", "700", "900"],
 });
 
-export const metadata: Metadata = {
-  title: "OpenInstall — Cross-Distro Linux App Installer",
-  description: "Install Linux apps across any distro with a single command.",
-};
+export function generateMetadata(): Metadata {
+  return {
+    title: "OpenInstall — Cross-Distro Linux App Installer",
+    description: "Install Linux apps across any distro with a single command.",
+  };
+}
 
 export default function RootLayout({
   children,
@@ -24,7 +26,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen antialiased" style={{ paddingTop: "64px" }}>
         <Navbar />
-        <main>{children}</main>
+        <main className="mx-auto max-w-[var(--max-width)] px-4">{children}</main>
         <Footer />
       </body>
     </html>

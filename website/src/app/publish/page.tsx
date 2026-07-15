@@ -40,8 +40,8 @@ export default function PublishPage() {
   });
 
   useEffect(() => {
-    const jwt = localStorage.getItem("jwt");
-    if (!jwt) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       router.push("/auth/login");
     } else {
       setLoading(false);

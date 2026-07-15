@@ -6,6 +6,7 @@ interface ButtonProps {
   onClick?: () => void;
   children: React.ReactNode;
   type?: "button" | "submit";
+  loading?: boolean;
 }
 
 export default function Button({
@@ -14,13 +15,14 @@ export default function Button({
   onClick,
   children,
   type = "button",
+  loading = false,
 }: ButtonProps) {
   const isPrimary = variant === "primary";
 
   return (
     <button
       type={type}
-      disabled={disabled}
+      disabled={disabled || loading}
       onClick={onClick}
       className="cursor-pointer font-semibold transition-opacity duration-200"
       style={{
@@ -29,8 +31,8 @@ export default function Button({
         border: "1px solid #000000",
         padding: "12px 24px",
         fontSize: "14px",
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled || loading ? 0.5 : 1,
+        cursor: disabled || loading ? "not-allowed" : "pointer",
       }}
       onMouseEnter={(e) => {
         if (disabled) return;
@@ -51,7 +53,11 @@ export default function Button({
         }
       }}
     >
-      {children}
+      {loading ? (
+        <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent animate-spin" />
+      ) : (
+        children
+      )}
     </button>
   );
 }

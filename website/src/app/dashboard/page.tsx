@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("jwt");
+    const token = localStorage.getItem("token");
     if (!token) {
       router.push("/auth/login");
       return;
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         ]);
 
         if (!favRes.ok || !histRes.ok) {
-          localStorage.removeItem("jwt");
+          localStorage.removeItem("token");
           router.push("/auth/login");
           return;
         }
@@ -71,12 +71,12 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("jwt");
+    localStorage.removeItem("token");
     router.push("/");
   };
 
   const handleRemoveFavorite = async (manifestId: string) => {
-    const token = localStorage.getItem("jwt");
+    const token = localStorage.getItem("token");
     if (!token) return;
 
     try {

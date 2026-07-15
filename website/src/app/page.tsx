@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Button from "@/components/Button";
 import { CopyCommand } from "@/components/CopyCommand";
 
@@ -50,7 +51,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
               gap: 24,
             }}
           >
@@ -86,7 +87,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
               gap: 24,
             }}
           >
@@ -112,6 +113,7 @@ export default function Home() {
             paddingBottom: 128,
             display: "flex",
             alignItems: "center",
+            flexWrap: "wrap",
             gap: 24,
           }}
         >
@@ -126,8 +128,12 @@ export default function Home() {
           >
             Get started
           </h2>
-          <Button variant="primary">Install now</Button>
-          <Button variant="secondary">Browse apps</Button>
+          <Link href="https://github.com/bejiihiu/openinstall#installation">
+            <Button variant="primary">Install now</Button>
+          </Link>
+          <Link href="/catalog">
+            <Button variant="secondary">Browse apps</Button>
+          </Link>
         </section>
       </div>
     </main>

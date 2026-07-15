@@ -36,6 +36,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className="px-4 py-2 text-sm transition-colors duration-200"
+                aria-current={isActive ? "page" : undefined}
                 style={{
                   fontWeight: isActive ? 600 : 400,
                   backgroundColor: isActive ? "#000000" : "transparent",
@@ -64,6 +65,7 @@ export default function Navbar() {
           className="md:hidden p-2 border border-black"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
           style={{ backgroundColor: menuOpen ? "#000000" : "#FFFFFF" }}
         >
           <div className="flex flex-col gap-1">
@@ -101,6 +103,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className="block px-6 py-3 border-b border-black text-sm"
+                aria-current={isActive ? "page" : undefined}
                 style={{
                   fontWeight: isActive ? 600 : 400,
                   backgroundColor: isActive ? "#000000" : "#FFFFFF",

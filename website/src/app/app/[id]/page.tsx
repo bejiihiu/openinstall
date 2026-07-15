@@ -1,4 +1,5 @@
 import CopyButton from "@/components/CopyButton";
+import { notFound } from "next/navigation";
 
 interface Manifest {
   _id: string;
@@ -13,27 +14,6 @@ interface Manifest {
   signature?: string;
 }
 
-const mockManifest: Manifest = {
-  _id: "1",
-  name: "Cursor",
-  publisher: "Anysphere",
-  description: "AI Code Editor that helps you write better code faster.",
-  version: "1.5.0",
-  homepage: "https://cursor.sh",
-  license: "MIT",
-  packages: {
-    ubuntu:
-      "https://github.com/anysphere/cursor/releases/download/v1.5.0/cursor-amd64.deb",
-    arch: "https://github.com/anysphere/cursor/releases/download/v1.5.0/cursor.pkg.tar.zst",
-    fedora:
-      "https://github.com/anysphere/cursor/releases/download/v1.5.0/cursor-amd64.rpm",
-    fallback:
-      "https://github.com/anysphere/cursor/releases/download/v1.5.0/Cursor-1.5.0-x86_64.AppImage",
-  },
-  sha256: "abc123...",
-  signature: "ed25519:pubkey:signature",
-};
-
 const PLATFORM_LABELS: Record<string, string> = {
   ubuntu: "Ubuntu / Debian",
   arch: "Arch Linux",
@@ -45,16 +25,13 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 async function getManifest(id: string): Promise<Manifest> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
-    const res = await fetch(`${baseUrl}/api/manifests/${id}`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) throw new Error("not found");
-    return res.json();
-  } catch {
-    return mockManifest;
+  const res = await fetch(`/api/manifests/${id}`, {
+    next: { revalidate: 60 },
+  });
+  if (!res.ok) {
+    notFound();
   }
+  return res.json();
 }
 
 export default async function AppDetailPage({
