@@ -6,7 +6,7 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
-export default function SearchBar({ value, onChange, placeholder = "Search apps..." }: SearchBarProps) {
+export default function SearchBar({ value, onChange, placeholder = "Search applications..." }: SearchBarProps) {
   return (
     <div className="w-full">
       <Input

@@ -7,12 +7,12 @@ import Footer from "@/components/Footer";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "swap",
+  weight: ["300", "400", "500", "600", "700", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "OpenInstall",
-  description: "Linux app installer that works across distros",
+  title: "OpenInstall — Cross-Distro Linux App Installer",
+  description: "Install Linux apps across any distro with a single command.",
 };
 
 export default function RootLayout({

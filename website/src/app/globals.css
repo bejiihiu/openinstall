@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+<<<<<<< HEAD
 :root {
   --color-black: #000000;
   --color-white: #FFFFFF;
@@ -39,4 +40,24 @@ body {
 ::selection {
   background-color: #000000;
   color: #FFFFFF;
+=======
+@theme inline {
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --font-sans: var(--font-inter);
+}
+
+* {
+  border-radius: 0;
+}
+
+body {
+  background: #ffffff;
+  color: #000000;
+}
+
+::selection {
+  background: #000000;
+  color: #ffffff;
+>>>>>>> feat/website-catalog
 }
