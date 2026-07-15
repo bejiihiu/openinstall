@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/components/Button";
 
 interface User {
   email: string;
-  role: "user" | "publisher" | "admin";
+  role: string;
 }
 
 interface Favorite {
@@ -40,13 +41,11 @@ export default function DashboardPage() {
 
     const fetchData = async () => {
       try {
+        const headers = { Authorization: `Bearer ${token}` };
+
         const [favRes, histRes] = await Promise.all([
-          fetch("/api/user/favorites", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/user/history", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetch("/api/user/favorites", { headers }),
+          fetch("/api/user/history", { headers }),
         ]);
 
         if (!favRes.ok || !histRes.ok) {
@@ -129,12 +128,9 @@ export default function DashboardPage() {
               {user.role}
             </span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-white text-black border border-black px-6 py-3 font-semibold cursor-pointer transition-all hover:bg-black hover:text-white"
-          >
+          <Button variant="secondary" onClick={handleLogout}>
             Logout
-          </button>
+          </Button>
         </section>
       )}
 
@@ -157,12 +153,12 @@ export default function DashboardPage() {
               >
                 <h3 className="font-bold text-lg">{app.name}</h3>
                 <p className="text-sm">{app.publisher}</p>
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => handleRemoveFavorite(app._id)}
-                  className="bg-white text-black border border-black px-4 py-2 font-semibold cursor-pointer transition-all hover:bg-black hover:text-white mt-2 self-start"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
