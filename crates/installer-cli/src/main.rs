@@ -483,7 +483,7 @@ fn register_gui_desktop() -> Result<(), String> {
          Name=OpenInstall\n\
          Comment=Linux Application Installer\n\
          Exec=env GSK_RENDERER=cairo GDK_DISABLE=vulkan {escaped} gui %u\n\
-         Icon=system-software-install\n\
+         Icon=openinstall\n\
          Terminal=false\n\
          Categories=Utility;\n\
          MimeType=x-scheme-handler/openinstall;x-scheme-handler/openinstaller;x-scheme-handler/linuxinstall;\n"
@@ -496,6 +496,14 @@ fn register_gui_desktop() -> Result<(), String> {
     std::fs::write(&desktop_path, &desktop)
         .map_err(|e| format!("failed to write desktop file: {e}"))?;
     println!("wrote: {}", desktop_path.display());
+
+    const LOGO_PNG: &[u8] = include_bytes!("../../../LOGO.png");
+    let icon_dir = PathBuf::from(&home).join(".local/share/icons/hicolor/256x256/apps");
+    std::fs::create_dir_all(&icon_dir)
+        .map_err(|e| format!("failed to create {icon_dir:?}: {e}"))?;
+    let icon_path = icon_dir.join("openinstall.png");
+    std::fs::write(&icon_path, LOGO_PNG).map_err(|e| format!("failed to write icon: {e}"))?;
+    println!("wrote: {}", icon_path.display());
 
     if Command::new("xdg-mime").arg("--version").output().is_ok() {
         for scheme in &["openinstall", "openinstaller", "linuxinstall"] {

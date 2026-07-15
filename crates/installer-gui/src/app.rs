@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::sync::mpsc;
 
 use adw::prelude::*;
+use gtk::gdk;
 use gtk4 as gtk;
 
 use installer_core::runtime::Installer;
@@ -165,7 +166,15 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
         .application(app)
         .default_width(settings.window_width)
         .default_height(settings.window_height)
+        .icon_name("openinstall")
         .build();
+
+    // ponytail: embedded logo fallback for dev builds without hicolor install
+    const LOGO_PNG: &[u8] = include_bytes!("../../../LOGO.png");
+    if let Ok(texture) = gdk::Texture::from_bytes(&glib::Bytes::from_static(LOGO_PNG)) {
+        use gtk::prelude::ToplevelExt;
+        window.set_icon_list(&[&texture]);
+    }
 
     apply_theme(&settings);
 
@@ -408,7 +417,7 @@ fn build_window(app: &adw::Application, data: Rc<RefCell<UiData>>) {
     action.connect_activate(move |_, _| {
         let about = adw::AboutDialog::builder()
             .application_name("OpenInstall")
-            .application_icon("system-software-install-symbolic")
+            .application_icon("openinstall")
             .version(env!("CARGO_PKG_VERSION"))
             .developer_name("OpenInstall Contributors")
             .developers(vec!["OpenInstall Contributors".to_string()])
@@ -1027,16 +1036,14 @@ fn build_advanced_group(
 
     let timeout_row = adw::SpinRow::builder()
         .title(t(locale, "settings.download_timeout"))
-        .adjustment(
-            &gtk::Adjustment::new(
-                settings.download_timeout as f64,
-                10.0,
-                600.0,
-                10.0,
-                10.0,
-                0.0,
-            ),
-        )
+        .adjustment(&gtk::Adjustment::new(
+            settings.download_timeout as f64,
+            10.0,
+            600.0,
+            10.0,
+            10.0,
+            0.0,
+        ))
         .build();
 
     let settings_timeout = settings.clone();

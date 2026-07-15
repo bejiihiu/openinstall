@@ -1,6 +1,10 @@
 # OpenInstall
 
 <p align="center">
+  <img src="LOGO.png" width="128" alt="OpenInstall logo">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/github/actions/workflow/status/bejiihiu/openinstall/ci.yml?branch=main&label=CI">
   <img src="https://img.shields.io/badge/rust-1.85%2B-orange">
   <img src="https://img.shields.io/github/license/bejiihiu/openinstall">
